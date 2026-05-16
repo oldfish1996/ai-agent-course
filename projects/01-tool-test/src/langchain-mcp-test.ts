@@ -1,4 +1,6 @@
 import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { ChatOpenAI } from "@langchain/openai";
 import chalk from "chalk";
@@ -17,13 +19,14 @@ const model = new ChatOpenAI({
   },
 });
 
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const mcpServerPath = path.join(currentDir, "my-mcp-server.ts");
+
 const mcpClient = new MultiServerMCPClient({
   mcpServers: {
     "my-mcp-server": {
       command: "tsx",
-      args: [
-        "/Users/chenyansong/Desktop/chen/ai-agent/hello-agent/src/my-mcp-server.ts",
-      ],
+      args: [mcpServerPath],
     },
   },
 });
