@@ -28,6 +28,21 @@ const mcpClient = new MultiServerMCPClient({
       command: "tsx",
       args: [mcpServerPath],
     },
+    "amap-maps-streamHTTP": {
+      url: `https://mcp.amap.com/mcp?key=${process.env.AMAP_API_KEY}`,
+    },
+    filesystem: {
+      command: "npx",
+      args: [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        ...(process.env.ALLOWED_PATH.split(",") || ""),
+      ],
+    },
+    "chrome-devtools": {
+      command: "npx",
+      args: ["-y", "chrome-devtools-mcp@latest"],
+    },
   },
 });
 
@@ -72,11 +87,19 @@ async function runAgentWithTools(query: string, maxIterations = 30) {
 
     for (const toolCall of response.tool_calls) {
       const foundTool = tools.find((t) => t.name === toolCall.name);
+
       if (foundTool) {
         const toolResult = await (foundTool.invoke as any)(toolCall.args);
+
+        let contentStr = "";
+        if (toolResult?.text) {
+          contentStr = toolResult.text;
+        } else {
+          contentStr = toolResult;
+        }
         messages.push(
           new ToolMessage({
-            content: toolResult,
+            content: contentStr,
             tool_call_id: toolCall.id,
           }),
         );
@@ -88,6 +111,10 @@ async function runAgentWithTools(query: string, maxIterations = 30) {
 }
 
 // await runAgentWithTools("请查询数据库中的用户信息，用户 ID 为 001");
-await runAgentWithTools("MCP Server 的使用指南是什么");
+// await runAgentWithTools("MCP Server 的使用指南是什么");
+// await runAgentWithTools("查询用户002的个人信息");
+await runAgentWithTools(
+  "上海漕河泾开发区附近的酒店，打开浏览器，展示每个酒店的图片，每个 tab 一个 url 展示",
+);
 
 await mcpClient.close();

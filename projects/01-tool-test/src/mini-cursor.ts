@@ -14,7 +14,7 @@ import {
 import chalk from "chalk";
 
 const model = new ChatOpenAI({
-  modelName: "qwen-plus",
+  model: process.env.MODEL_NAME,
   apiKey: process.env.OPENAI_API_KEY,
   temperature: 0,
   configuration: {
