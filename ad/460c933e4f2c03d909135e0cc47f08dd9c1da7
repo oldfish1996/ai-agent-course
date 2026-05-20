@@ -1,0 +1,509 @@
+projects/02-rag-test/src/loader-and-splitter2.ts
+  7df83563a8495443 4-5
+  65d51fb36d3c82c6 45-48
+  dff66b44941684f7 25-30
+  10510f6c6bd4988e 83-99 gitai:{"mixed_line_ranges":[{"Single":83},{"Single":87},{"Range":[97,99]}],"operations":[]}
+  6913c57ef93c7058 17,19-23 gitai:{"mixed_line_ranges":[{"Single":19},{"Single":21}],"operations":[]}
+  6c52ddd3fca5d3cf 62
+  ac76976046656c1d 64
+  680d63da642af758 1
+  eec3d05669852727 76 gitai:{"mixed_line_ranges":[{"Single":76}],"operations":[]}
+  ebe57da8fc7b26bf 6 gitai:{"mixed_line_ranges":[{"Single":6}],"operations":[]}
+  4060fdaba87429b2 18
+  ea66c6391763625f 72 gitai:{"mixed_line_ranges":[{"Single":72}],"operations":[]}
+  d2d1a03440309b2d 55-61 gitai:{"mixed_line_ranges":[{"Single":55},{"Single":61}],"operations":[]}
+  c8031b4cd7b2c4a4 51-53 gitai:{"mixed_line_ranges":[{"Single":52}],"operations":[]}
+  b0e41969ed1dd60e 44
+  84ef7a5d89b3030d 8-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "ad460c933e4f2c03d909135e0cc47f08dd9c1da7",
+  "prompts": {
+    "00a609f92f846fae": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-b1fb23af-6c2b-45f7-8946-c6eda8a5ae6a",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "10510f6c6bd4988e": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-683fcc8d-f71c-47dc-8552-3d2f2666bffa",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 5
+    },
+    "34231a95c93d2132": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-66357f0b-ff56-40f8-b098-6b7b6b9c9fe3",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "394e70c8bbc167b9": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-3113d0f9-df8a-4ebc-b4f3-fdd592b60f73",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "4060fdaba87429b2": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-3c903b10-68d7-4ff6-a2c4-fbd9c0ddbca7",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "41ab4a140ce012f3": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-447b9257-2ead-4e3a-b5c2-342579cffa71",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 1,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "45d820049076ad37": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-c317d374-594c-4a81-a4ed-fd94daf10b89",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "55de48ff852b8054": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-1d7d650a-a9cc-44b8-b90c-906fe21238c4",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "586cda189626e4ae": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-38ee28c3-2355-46b1-b9af-de0524a66c85",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    },
+    "65d51fb36d3c82c6": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-1c9338a1-6bad-491c-9914-f9b644a7af02",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 1,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "680d63da642af758": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-0a10260e-7cfb-4dc9-876a-8298b3af4015",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "6913c57ef93c7058": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-6d8f681e-a520-481f-a819-76e41d9975c5",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 1,
+      "accepted_lines": 4,
+      "overriden_lines": 2
+    },
+    "6c52ddd3fca5d3cf": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-cd50eea3-bd45-45ba-aa2f-5c76ecf25f7f",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "7aa968cfeb450567": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-b1f67abc-8285-4ef0-b874-ea6010984357",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "7df83563a8495443": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-15dbfeba-404b-4dbd-bd0c-7b20f6fe5a42",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 1,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "84ef7a5d89b3030d": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-43326549-c6b9-43e2-9db8-b8503ec8148d",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 1,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "ac76976046656c1d": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-59e1bdc9-05ca-4ad8-9922-cf261b5ee13f",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "b0e41969ed1dd60e": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-15781890-a5ab-4bb5-bbe8-b2251bc9ef2f",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "c8031b4cd7b2c4a4": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-c8c397e4-1517-4d85-b607-79b8c1fb213c",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 1,
+      "accepted_lines": 2,
+      "overriden_lines": 1
+    },
+    "cadd5d2a2d153572": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-fe3212a5-f241-46ae-a88e-b1c6e39f21f6",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "d2d1a03440309b2d": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-bab66750-87fd-4c36-9556-262f8db88bdc",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 2
+    },
+    "dff66b44941684f7": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-9ee7f914-6dbc-43b5-ad81-f8dda2f0a60d",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 1,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "ea66c6391763625f": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-60eabc8a-e148-4a2b-81a6-63c27a858356",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    },
+    "ebe57da8fc7b26bf": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-7a4a470b-0abc-4eab-80c9-8c1786f752bd",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    },
+    "eec3d05669852727": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-502132f4-a77f-466f-99df-159f640063dd",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    },
+    "f8d93107395ed462": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-a101315d-cf99-4912-8502-b9649c436330",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "f91596d3b5260c29": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-5ffe2a32-b447-42a1-839e-1afbaacea5fb",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "projects/02-rag-test/src/loader-and-splitter2.ts": [
+      {
+        "hash": "10510f6c6bd4988e",
+        "line_ranges": [
+          {
+            "Range": [
+              83,
+              99
+            ]
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 83
+          },
+          {
+            "Single": 87
+          },
+          {
+            "Range": [
+              97,
+              99
+            ]
+          }
+        ],
+        "operations": []
+      },
+      {
+        "hash": "6913c57ef93c7058",
+        "line_ranges": [
+          {
+            "Single": 17
+          },
+          {
+            "Range": [
+              19,
+              23
+            ]
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 19
+          },
+          {
+            "Single": 21
+          }
+        ],
+        "operations": []
+      },
+      {
+        "hash": "eec3d05669852727",
+        "line_ranges": [
+          {
+            "Single": 76
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 76
+          }
+        ],
+        "operations": []
+      },
+      {
+        "hash": "ebe57da8fc7b26bf",
+        "line_ranges": [
+          {
+            "Single": 6
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 6
+          }
+        ],
+        "operations": []
+      },
+      {
+        "hash": "ea66c6391763625f",
+        "line_ranges": [
+          {
+            "Single": 72
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 72
+          }
+        ],
+        "operations": []
+      },
+      {
+        "hash": "d2d1a03440309b2d",
+        "line_ranges": [
+          {
+            "Range": [
+              55,
+              61
+            ]
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 55
+          },
+          {
+            "Single": 61
+          }
+        ],
+        "operations": []
+      },
+      {
+        "hash": "c8031b4cd7b2c4a4",
+        "line_ranges": [
+          {
+            "Range": [
+              51,
+              53
+            ]
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 52
+          }
+        ],
+        "operations": []
+      }
+    ]
+  },
+  "remote_transcripts": {}
+}
