@@ -41,9 +41,10 @@ try {
   for await (const chunk of stream as AsyncGenerator<
     Array<{ args: z.infer<typeof scientistInfoSchema> }>
   >) {
+    console.log(`chunk:`, chunk);
     if (chunk.length > 0) {
-      const toolCall = chunk[0];
-      console.log(toolCall.args);
+      // const toolCall = chunk[0];
+      // console.log(toolCall.args);
     }
   }
 } catch (error) {

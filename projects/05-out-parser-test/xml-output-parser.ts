@@ -21,7 +21,7 @@ console.log(question);
 try {
   const response = await model.invoke(question);
   console.log("原始响应:", response.content);
-  const parsedResponse = await parser.parse(response.content);
+  const parsedResponse = await parser.parse(response.content as string);
   console.log("解析后的响应:", parsedResponse);
 } catch (error) {
   console.error("错误:", error);

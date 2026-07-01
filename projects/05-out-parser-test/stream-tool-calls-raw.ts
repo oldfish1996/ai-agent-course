@@ -35,9 +35,10 @@ try {
 
   let chunkIndex = 0;
   for await (const chunk of stream) {
+    console.log(`第 ${chunkIndex} 个 chunk:`, chunk);
     chunkIndex++;
     if (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) {
-      process.stdout.write(chunk.tool_call_chunks[0].args);
+      // process.stdout.write(chunk.tool_call_chunks[0].args);
     }
   }
 } catch (error) {
