@@ -1,0 +1,88 @@
+projects/05-out-parser-test/stream-with-structured-partial.ts
+  db9baab0ef08e7a4 28
+projects/05-out-parser-test/normal.ts
+  f716a881bdc4b5f9 19 gitai:{"mixed_line_ranges":[{"Single":19}],"operations":[]}
+projects/05-out-parser-test/stream-tool-calls-raw.ts
+  5fed6d06a1f446c4 38 gitai:{"mixed_line_ranges":[{"Single":38}],"operations":[]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "83366e0fb042326ca96b76462b9408486efb8b82",
+  "prompts": {
+    "5fed6d06a1f446c4": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-8b74600b-bd17-41bf-bde3-50eea9c83519",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    },
+    "db9baab0ef08e7a4": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-aea33263-e033-41e8-81da-4b4cffb870eb",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "f716a881bdc4b5f9": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-8c6089f4-5793-408b-ba49-283e032ea0f8",
+        "model": "default"
+      },
+      "human_author": "chenyansong <chenyansong.cys@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    }
+  },
+  "attestation_metadata": {
+    "projects/05-out-parser-test/normal.ts": [
+      {
+        "hash": "f716a881bdc4b5f9",
+        "line_ranges": [
+          {
+            "Single": 19
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 19
+          }
+        ],
+        "operations": []
+      }
+    ],
+    "projects/05-out-parser-test/stream-tool-calls-raw.ts": [
+      {
+        "hash": "5fed6d06a1f446c4",
+        "line_ranges": [
+          {
+            "Single": 38
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 38
+          }
+        ],
+        "operations": []
+      }
+    ]
+  },
+  "remote_transcripts": {}
+}
