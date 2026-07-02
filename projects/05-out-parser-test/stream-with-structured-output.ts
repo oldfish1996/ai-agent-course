@@ -22,7 +22,7 @@ const schema = z.object({
 
 const structuredModel = model.withStructuredOutput(schema);
 
-const prompt = `请介绍一下莫扎特。`;
+const prompt = `请介绍一下梵高。`;
 
 try {
   const stream = await structuredModel.stream(prompt);

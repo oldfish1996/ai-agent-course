@@ -31,11 +31,11 @@ const modelWithTool = model.bindTools([
 console.log("🌊 流式 Tool Calls 演示 - 直接打印原始 tool_calls_chunk\n");
 
 try {
-  const stream = await modelWithTool.stream("请介绍一下牛顿。");
+  const stream = await modelWithTool.stream("请介绍一下高斯。");
 
   let chunkIndex = 0;
   for await (const chunk of stream) {
-    console.log(`第 ${chunkIndex} 个 chunk:`, chunk);
+    console.log("📄 当前 chunk:", chunk);
     chunkIndex++;
     if (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) {
       // process.stdout.write(chunk.tool_call_chunks[0].args);

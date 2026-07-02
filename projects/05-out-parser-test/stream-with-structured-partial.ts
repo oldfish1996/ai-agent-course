@@ -23,7 +23,9 @@ const schema = z.object({
 
 const parser = StructuredOutputParser.fromZodSchema(schema);
 
-const prompt = `请介绍一下莫扎特。 ${parser.getFormatInstructions()}`;
+const prompt = `请介绍一下莫奈。 ${parser.getFormatInstructions()}`;
+
+console.log(`生成的提示词：\n ${prompt}`);
 
 try {
   const stream = await model.stream(prompt);

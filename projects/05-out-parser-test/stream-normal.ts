@@ -10,7 +10,7 @@ const model = new ChatOpenAI({
   },
 });
 
-const prompt = `请介绍一下莫扎特。`;
+const prompt = `请介绍一下邢道荣。`;
 
 try {
   const stream = await model.stream(prompt);

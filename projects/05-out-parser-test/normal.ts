@@ -16,6 +16,8 @@ const parser = new JsonOutputParser();
 const question = `请介绍一下爱因斯坦的信息。请以 JSON 格式返回，包含以下字段：name（姓名）、birth_year（出生年份）、nationality（国籍）、major_achievements（主要成就，数组）、famous_theory（著名理论）。
   ${parser.getFormatInstructions()}`;
 
+console.log(`生成的提示词：\n ${question}`);
+
 try {
   const response = await model.invoke(question);
   console.log(`原始响应: ${response.content}`);
