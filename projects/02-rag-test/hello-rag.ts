@@ -2,6 +2,7 @@ import "dotenv/config";
 import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
 import { Document } from "@langchain/core/documents";
 import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
+import chalk from "chalk";
 
 const model = new ChatOpenAI({
   temperature: 0,
@@ -22,29 +23,29 @@ const embeddings = new OpenAIEmbeddings({
 
 const documents = [
   new Document({
-    pageContent: `oldfish是一名硕士毕业生，他2022年毕业于浙江大学`,
+    pageContent: `chen是一名硕士毕业生，他2022年毕业于浙江大学`,
     metadata: {
       chapter: 1,
-      character: "oldfish",
+      character: "chen",
       type: "角色介绍",
       mood: "学历、专业",
     },
   }),
   new Document({
-    pageContent: `oldfish硕士毕业后进入字节跳动成为一名前端开发工程师`,
+    pageContent: `chen 硕士毕业后进入字节跳动成为一名前端开发工程师`,
     metadata: {
       chapter: 2,
-      character: "oldfish",
-      type: "角色介绍",
+      character: "chen",
+      type: "工作经历",
       mood: "工作经历",
     },
   }),
   new Document({
-    pageContent: `oldfish生活中喜欢散步`,
+    pageContent: `chen生活中喜欢散步`,
     metadata: {
       chapter: 3,
-      character: "oldfish",
-      type: "角色介绍",
+      character: "chen",
+      type: "爱好",
       mood: "爱好",
     },
   }),
@@ -55,31 +56,27 @@ const vectorStore = await MemoryVectorStore.fromDocuments(
   embeddings,
 );
 
-const retriever = vectorStore.asRetriever({
-  k: 1,
-});
+// const retriever = vectorStore.asRetriever({
+//   k: 1,
+// });
 
-const questions = ["oldfish的工作经历是？"];
+const questions = ["chen在哪里毕业的？"];
 
 for (const question of questions) {
   console.log("=".repeat(80));
   console.log(`问题: ${question}`);
   console.log("=".repeat(80));
 
-  const retrievedDocs = await retriever.invoke(question);
-
-  const scoredResults = await vectorStore.similaritySearch(question, 1);
+  const scoredResults = await vectorStore.similaritySearchWithScore(
+    question,
+    2,
+  );
+  const retrievedDocs = scoredResults.map(([doc]) => doc);
 
   console.log("\n【检索到的文档及相似度评分】");
-  retrievedDocs.forEach((doc, i) => {
-    // 找到对应的评分
-    const scoredResult = scoredResults.find(
-      (scoredDoc) => scoredDoc.pageContent === doc.pageContent,
-    );
-    const score = scoredResult ? scoredResult[1] : null;
-    const similarity = score !== null ? (1 - score).toFixed(4) : "N/A";
-    console.log(`\n[文档 ${i + 1}] 相似度: ${similarity}`);
-    console.log(`内容: ${doc.pageContent}`);
+  scoredResults.forEach(([doc, similarity], i) => {
+    console.log(`\n[文档 ${i + 1}] 相似度: ${similarity.toFixed(4)}`);
+    console.log(`内容: ${doc.pageContent}`);
     console.log(
       `元数据: 章节=${doc.metadata.chapter}, 角色=${doc.metadata.character}, 类型=${doc.metadata.type}, 心情=${doc.metadata.mood}`,
     );
@@ -98,6 +95,8 @@ ${context}
 问题: ${question}
 
 你的的回答:`;
+
+console.log(chalk.blue(`prompt: ${prompt}`));
 
   console.log("\n【AI 回答】");
   const response = await model.invoke(prompt);

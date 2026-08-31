@@ -1,5 +1,5 @@
 import "dotenv/config";
-import "cheerio";
+// import "cheerio";
 import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
 import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/cheerio";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
@@ -59,25 +59,16 @@ for (const question of questions) {
   console.log("=".repeat(80));
   console.log(`问题: ${question}`);
   console.log("=".repeat(80));
-  const retrievedDocs = await retriever.invoke(question);
 
-  const scoredResults = await vectorStore.similaritySearch(question, 2);
-  console.log("\n【检索到的文档及相似度评分】");
-  retrievedDocs.forEach((doc, i) => {
-    // 找到对应的评分
-    const scoredResult = scoredResults.find(
-      (scoredDoc) => scoredDoc.pageContent === doc.pageContent,
-    );
-    const score = scoredResult ? scoredResult[1] : null;
-    const similarity = score ? (1 - score).toFixed(4) : "N/A";
-    console.log(
-      `文档 ${i + 1}: ${doc.pageContent} (相似度评分: ${similarity})`,
-    );
-    console.log(`内容: ${doc.pageContent}`);
-    if (doc.metadata && Object.keys(doc.metadata).length > 0) {
-      console.log(`元数据:`, doc.metadata);
-    }
-  });
+  const scoredResults = await vectorStore.similaritySearchWithScore(
+    question,
+    2,
+  );
+  const retrievedDocs = scoredResults.map(([doc]) => doc);
+
+  scoredResults.forEach(([doc, score], i) => {
+    console.log(`文档 [${i+1}]: ${doc.pageContent} (相似度评分: ${score.toFixed(4)})`);
+  })
 
   // 构造prompt
   const context = retrievedDocs
