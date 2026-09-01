@@ -8,7 +8,7 @@ const VECTOR_DIM = 1024;
 const model = new ChatOpenAI({
   model: process.env.MODEL_NAME,
   apiKey: process.env.OPENAI_API_KEY,
-  temperature: 0.7,
+  temperature: 0.2,
   configuration: {
     baseURL: process.env.OPENAI_BASE_URL,
   },
@@ -74,7 +74,7 @@ async function answerDiaryQuestion(question: string, k: number = 2) {
 
     const context = retrievedDiaries
       .map((diary, i) => {
-        return `[日记 ${i + 1}]\n${diary.content}
+        return `[日记 ${i + 1}]\n
         日期: ${diary.date}
         心情: ${diary.mood}
         标签: ${diary.tags}
