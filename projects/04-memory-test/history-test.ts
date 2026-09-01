@@ -46,6 +46,7 @@ async function inMemoryChat() {
   console.log("AI 回答:", response2.content);
 
   // 展示所有历史消息记录
+  console.log("=".repeat(50));
   console.log("[所有历史消息记录]");
   const allMessages = await history.getMessages();
   console.log(`共 ${allMessages.length} 条消息记录`);
@@ -53,7 +54,7 @@ async function inMemoryChat() {
   allMessages.forEach((msg, index) => {
     const type = msg.type;
     const prefix = type === "human" ? "用户:" : "AI 回答:";
-    console.log(`${index + 1}. ${prefix}${msg.content}`);
+    console.log(`  ${index + 1}. ${prefix}${msg.content}`);
   });
 }
 

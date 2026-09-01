@@ -37,7 +37,7 @@ async function truncateByMessageCount() {
 
   console.log(`保留消息数量：${trimMessages.length}`);
   console.log(
-    `保留消息内容：${trimMessages.map((msg) => `${msg.constructor.name} ${msg.content}`).join("\n")}`,
+    `保留消息内容：\n ${trimMessages.map((msg) => `${msg.constructor.name} ${msg.content}`).join("\n")}`,
   );
 }
 
@@ -92,7 +92,7 @@ async function truncateByTokenCount() {
   console.log(`总tokens: ${totalTokens} / ${maxTokens}`);
   console.log(`保留消息数量：${trimmedMessages.length}`);
   console.log(
-    `保留消息内容: ${trimmedMessages
+    `保留消息内容: \n${trimmedMessages
       .map((msg) => {
         const content =
           typeof msg.content === "string"
