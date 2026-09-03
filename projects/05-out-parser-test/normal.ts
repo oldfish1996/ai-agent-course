@@ -25,11 +25,6 @@ try {
   const result = await parser.parse(response.content as string);
   console.log("✅ JsonOutputParser 自动解析的结果:\n");
   console.log(result);
-  console.log(`姓名: ${result.name}`);
-  console.log(`出生年份: ${result.birth_year}`);
-  console.log(`国籍: ${result.nationality}`);
-  console.log(`著名理论: ${result.famous_theory}`);
-  console.log(`主要成就:`, result.major_achievements);
 } catch (error) {
   console.error("Error:", error);
 }

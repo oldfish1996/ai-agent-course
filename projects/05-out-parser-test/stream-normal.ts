@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { ChatOpenAI } from "@langchain/openai";
+import chalk from "chalk";
 
 const model = new ChatOpenAI({
   // temperature: 0,
@@ -10,7 +11,7 @@ const model = new ChatOpenAI({
   },
 });
 
-const prompt = `请介绍一下邢道荣。`;
+const prompt = `请介绍一下三国的袁术。`;
 
 try {
   const stream = await model.stream(prompt);
@@ -23,8 +24,8 @@ try {
     process.stdout.write(chunk.content as string);
   }
 
-  console.log(`\n[总 chunk 数量] ${chunkCount}`);
-  console.log(`[总响应长度] ${fullResponse.length}`);
+  console.log(chalk.blue(`\n[总 chunk 数量] ${chunkCount}`));
+  console.log(chalk.green(`[总响应长度] ${fullResponse.length}`));
 } catch (error) {
   console.error("错误:", error);
 }

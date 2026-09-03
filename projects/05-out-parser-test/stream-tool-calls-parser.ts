@@ -23,8 +23,8 @@ const scientistInfoSchema = z.object({
 
 const modelWithTool = model.bindTools([
   {
-    name: "scientist_info",
-    description: "获取科学家的信息",
+    name: "extract_scientist_info",
+    description: "提取和结构化科学家的信息",
     schema: scientistInfoSchema,
   },
 ]);
@@ -33,6 +33,7 @@ const parser = new JsonOutputToolsParser();
 const chain = modelWithTool.pipe(parser);
 
 try {
+  // 开启流
   const stream = await chain.stream("请介绍一下牛顿。");
 
   let lastContent = "";
@@ -41,10 +42,10 @@ try {
   for await (const chunk of stream as AsyncGenerator<
     Array<{ args: z.infer<typeof scientistInfoSchema> }>
   >) {
-    console.log(`chunk:`, chunk);
+    // console.log(`chunk:`, chunk);
     if (chunk.length > 0) {
-      // const toolCall = chunk[0];
-      // console.log(toolCall.args);
+      const toolCall = chunk[0];
+      console.log('💻', toolCall.args);
     }
   }
 } catch (error) {

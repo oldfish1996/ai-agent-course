@@ -2,6 +2,7 @@ import "dotenv/config";
 import { ChatOpenAI } from "@langchain/openai";
 import { StructuredOutputParser } from "@langchain/core/output_parsers";
 import { z } from "zod";
+import chalk from "chalk";
 
 const model = new ChatOpenAI({
   // temperature: 0,
@@ -39,7 +40,7 @@ try {
     process.stdout.write(chunk.content as string);
   }
 
-  console.log(`共接受 ${chunkCount} 个 chunk`);
+  console.log(chalk.blue(`共接受 ${chunkCount} 个 chunk`));
 } catch (error) {
   console.error("错误:", error);
 }

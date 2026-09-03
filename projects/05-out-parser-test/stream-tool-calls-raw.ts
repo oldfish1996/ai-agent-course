@@ -22,8 +22,8 @@ const schema = z.object({
 
 const modelWithTool = model.bindTools([
   {
-    name: "scientist_info",
-    description: "获取科学家的信息",
+    name: "extract_scientist_info",
+    description: "提取和结构化科学家的信息",
     schema,
   },
 ]);
@@ -35,10 +35,11 @@ try {
 
   let chunkIndex = 0;
   for await (const chunk of stream) {
-    console.log("📄 当前 chunk:", chunk);
+    // console.log("📄 当前 chunk:", chunk);
     chunkIndex++;
     if (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) {
-      // process.stdout.write(chunk.tool_call_chunks[0].args);
+      // 流式输出效果
+      process.stdout.write(chunk.tool_call_chunks[0].args);
     }
   }
 } catch (error) {

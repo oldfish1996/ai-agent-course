@@ -30,7 +30,7 @@ const personSchema = z.object({
 
 const parser = StructuredOutputParser.fromZodSchema(personSchema);
 
-const question = `请介绍一下居里夫人（Marie Curie）的信息。
+const question = `请介绍一下海森堡的信息。
 ${parser.getFormatInstructions()}`;
 
 console.log(`生成的提示词：\n ${question}`);

@@ -29,10 +29,12 @@ const scientistSchema = z.object({
   famous_theory: z.string().describe("著名理论"),
 });
 
+// 不用定义tool的实现，只用告诉大模型有这个工具，参数是什么格式
+// 因为模型训练的时候就保证了tool calls的参数格式一定符合要求
 const modelWithTool = model.bindTools([
   {
-    name: "scientist_info",
-    description: "获取关于一位科学家的信息",
+    name: "extract_scientist_info",
+    description: "提取和结构化科学家的信息",
     schema: scientistSchema,
   },
 ]);

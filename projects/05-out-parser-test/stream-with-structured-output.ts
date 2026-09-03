@@ -20,6 +20,7 @@ const schema = z.object({
   famous_theory: z.string().describe("著名理论"),
 });
 
+// 底层灰根据模型决定用 tool call 还是 output parser
 const structuredModel = model.withStructuredOutput(schema);
 
 const prompt = `请介绍一下梵高。`;

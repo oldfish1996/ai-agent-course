@@ -24,6 +24,6 @@ const scientistSchema = z.object({
 
 const structuredModel = model.withStructuredOutput(scientistSchema);
 
-const result = await structuredModel.invoke("请介绍一下爱因斯坦的信息。");
+const result = await structuredModel.invoke("请介绍一下伽罗瓦的信息。");
 
 console.log(result);
