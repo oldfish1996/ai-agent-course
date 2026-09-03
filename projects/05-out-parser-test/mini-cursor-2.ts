@@ -1,30 +1,26 @@
 import "dotenv/config";
 import { ChatOpenAI } from "@langchain/openai";
 import {
+  AIMessageChunk,
   HumanMessage,
   SystemMessage,
   ToolMessage,
-  AIMessageChunk,
 } from "@langchain/core/messages";
 import { InMemoryChatMessageHistory } from "@langchain/core/chat_history";
+import { parsePartialJson } from "@langchain/core/output_parsers";
 import chalk from "chalk";
-// import { z } from "zod";
-import {
-  JsonOutputToolsParser,
-  type ParsedToolCall,
-} from "@langchain/core/output_parsers/openai_tools";
 
 import {
-  readFileTool,
-  writeFileTool,
   executeCommandTool,
   listDirectoryTool,
+  readFileTool,
+  writeFileTool,
 } from "../01-tool-test/src/all-tools.ts";
 
 const model = new ChatOpenAI({
-  // temperature: 0,
   apiKey: process.env.OPENAI_API_KEY,
   model: process.env.MODEL_NAME,
+  temperature: 0,
   configuration: {
     baseURL: process.env.OPENAI_BASE_URL,
   },
@@ -37,153 +33,208 @@ const tools = [
   listDirectoryTool,
 ];
 
-const modelWithTools = model.bindTools(tools);
+// 各工具的 Zod schema 不同，直接从 tools 数组中取值会形成无法调用的联合类型。
+// Agent 在运行时只需要统一的 name + invoke 接口，所以在注册表边界收窄类型。
+type AgentTool = {
+  name: string;
+  invoke(input: unknown): Promise<unknown>;
+};
 
-function contentToString(content: AIMessageChunk["content"]) {
-  return typeof content === "string" ? content : JSON.stringify(content);
+const toolRegistry = new Map<string, AgentTool>(
+  tools.map((tool) => [tool.name, tool as unknown as AgentTool]),
+);
+
+// 并行生成多个文件会让不同文件的代码片段交错在终端中。
+// 这个教学示例一次只允许一个工具调用，以保证流式输出容易阅读。
+const modelWithTools = model.bindTools(tools, {
+  parallel_tool_calls: false,
+});
+
+type WriteStreamState = {
+  toolName: string;
+  rawArgs: string;
+  printedContent: string;
+  announced: boolean;
+};
+
+/**
+ * 将消息内容转换成适合终端显示的文本。
+ * 大多数模型返回 string；这里同时兼容包含 text block 的消息格式。
+ */
+function contentToString(content: AIMessageChunk["content"]): string {
+  if (typeof content === "string") return content;
+
+  return content
+    .map((block) => {
+      if (typeof block === "string") return block;
+      if ("text" in block && typeof block.text === "string") return block.text;
+      return "";
+    })
+    .join("");
 }
 
-async function runAgentWIthTools(query: string, maxIterations: number = 30) {
+/**
+ * 实时展示 write_file 的 content 参数。
+ *
+ * tool_call_chunks 中的 args 是 JSON 字符串片段，不能直接打印，否则会看到
+ * `\\n`、`\\"` 等 JSON 转义字符。这里累计每个工具调用的参数，并使用
+ * parsePartialJson 解码当前已经生成的部分，然后只打印新增的代码。
+ */
+function printStreamingFileContent(
+  chunk: AIMessageChunk,
+  states: Map<number, WriteStreamState>,
+): void {
+  for (const toolChunk of chunk.tool_call_chunks ?? []) {
+    const index = toolChunk.index ?? 0;
+    const state = states.get(index) ?? {
+      toolName: "",
+      rawArgs: "",
+      printedContent: "",
+      announced: false,
+    };
+
+    state.toolName += toolChunk.name ?? "";
+    state.rawArgs += toolChunk.args ?? "";
+    states.set(index, state);
+
+    if (state.toolName !== "write_file") continue;
+
+    // parsePartialJson允许解析尚未完成的 JSON。
+    const args = parsePartialJson(state.rawArgs) as
+      | { filePath?: unknown; content?: unknown }
+      | null;
+
+    if (!args || typeof args.content !== "string") continue;
+
+    if (!state.announced) {
+      const filePath =
+        typeof args.filePath === "string" ? args.filePath : "未知文件";
+      process.stdout.write(
+        chalk.blue(`\n[生成文件] ${filePath}\n${"─".repeat(60)}\n`),
+      );
+      state.announced = true;
+    }
+
+    // 正常的流式参数只会在末尾追加内容。若服务端改写了已生成的前缀，
+    // 终端无法可靠撤回旧文本，因此暂不打印，最终仍以完整工具调用为准。
+    if (args.content.startsWith(state.printedContent)) {
+      process.stdout.write(args.content.slice(state.printedContent.length));
+      state.printedContent = args.content;
+    }
+  }
+}
+
+/**
+ * 调用模型一次，并把所有 chunk 合并成可加入历史记录的完整 AI 消息。
+ * 文本回复与 write_file 参数都会边生成边显示，但工具只在消息完整后执行。
+ */
+async function streamModelResponse(
+  messages: Awaited<ReturnType<InMemoryChatMessageHistory["getMessages"]>>,
+): Promise<AIMessageChunk> {
+  const stream = await modelWithTools.stream(messages);
+  const writeStates = new Map<number, WriteStreamState>();
+  let fullMessage: AIMessageChunk | undefined;
+
+  for await (const chunk of stream) {
+    fullMessage = fullMessage ? fullMessage.concat(chunk) : chunk;
+
+    const text = contentToString(chunk.content);
+    if (text) process.stdout.write(text);
+
+    printStreamingFileContent(chunk, writeStates);
+  }
+
+  if (!fullMessage) {
+    throw new Error("模型没有返回任何内容");
+  }
+
+  process.stdout.write("\n");
+  return fullMessage;
+}
+
+/**
+ * 执行一条完整 AI 消息里的工具调用，并为每次调用生成对应的 ToolMessage。
+ * 即使工具不存在或执行失败，也必须回传 ToolMessage，才能保持消息协议完整。
+ */
+async function executeToolCalls(message: AIMessageChunk): Promise<ToolMessage[]> {
+  const results: ToolMessage[] = [];
+
+  for (const toolCall of message.tool_calls ?? []) {
+    const toolCallId = toolCall.id;
+    if (!toolCallId) {
+      throw new Error(`工具调用 ${toolCall.name} 缺少 id`);
+    }
+
+    const selectedTool = toolRegistry.get(toolCall.name);
+    let result: unknown;
+
+    try {
+      result = selectedTool
+        ? await selectedTool.invoke(toolCall.args)
+        : `工具不存在: ${toolCall.name}`;
+    } catch (error) {
+      result = `工具执行失败: ${
+        error instanceof Error ? error.message : String(error)
+      }`;
+    }
+
+    results.push(
+      new ToolMessage({
+        tool_call_id: toolCallId,
+        content: typeof result === "string" ? result : JSON.stringify(result),
+      }),
+    );
+  }
+
+  return results;
+}
+
+async function runAgentWithTools(
+  query: string,
+  maxIterations = 30,
+): Promise<AIMessageChunk["content"]> {
   const history = new InMemoryChatMessageHistory();
 
   await history.addMessages([
     new SystemMessage(`
-      你是一个项目管理助手，使用工具完成任务。
-      当前工作目录是：${process.cwd()}
-      工具：
-      1.read_file: 读取文件
-      2.write_file: 写入文件
-      3.execute_command: 执行命令（支持 workingDirectory 参数）
-      4.list_directory: 列出目录
+你是一个智能代码助手。请使用工具完成用户交给你的开发任务。
+当前工作目录：${process.cwd()}
 
-      重要规则 - execute_command：
-      - workingDirectory 参数会自动切换到指定目录
-      - 当使用 workingDirectory 时，绝对不要在 command 中使用 cd
-      - 错误示例: { command: "cd react-todo-app && pnpm install", workingDirectory: "react-todo-app" }
-      这是错误的！因为 workingDirectory 已经在 react-todo-app 目录了，再 cd react-todo-app 会找不到目录
-      - 正确示例: { command: "pnpm install", workingDirectory: "react-todo-app" }
-      这样就对了！workingDirectory 已经切换到 react-todo-app，直接执行命令即可
+可用工具：
+- read_file：读取文件
+- write_file：写入文件
+- execute_command：执行命令，可通过 workingDirectory 指定工作目录
+- list_directory：列出目录
 
-      重要规则 - write_file：
-      - 当写入 React 组件文件（如 App.tsx）时，如果存在对应的 CSS 文件（如 App.css），在其他 import 语句后加上这个 css 的导入
-      `),
+规则：
+1. 使用 execute_command 的 workingDirectory 后，不要再在 command 中执行 cd。
+2. 修改代码前先读取相关文件，完成后使用合适的命令检查结果。
+3. write_file 必须提供完整文件内容，不要省略未修改的代码。
+4. 写 React 组件时，如果存在配套 CSS 文件，记得在组件中导入。
+`),
+    new HumanMessage(query),
   ]);
 
-  await history.addMessages([new HumanMessage(query)]);
+  for (let iteration = 1; iteration <= maxIterations; iteration++) {
+    console.log(chalk.bgGreen.black(` 第 ${iteration} 轮 `));
 
-  for (let i = 0; i < maxIterations; i++) {
-    console.log(chalk.bgGreen(`⏳ 正在等待 AI 思考...\n`));
+    const message = await streamModelResponse(await history.getMessages());
+    await history.addMessage(message);
 
-    const messages = await history.getMessages();
-
-    const rawStream = await modelWithTools.stream(messages);
-
-    // 拼接完整的 AIMessage
-    let fullAIMessage: AIMessageChunk | null = null;
-
-    const toolParser = new JsonOutputToolsParser<ParsedToolCall[]>({
-      returnId: true,
-    });
-
-    // 记录每个工具调用已打印的长度（用id或filePath作为key）
-    const printedLengths = new Map<string, number>();
-
-    console.log(chalk.blue("\n 🚀 Agent 开始思考并生成流...\n"));
-
-    for await (const chunk of rawStream) {
-      fullAIMessage = fullAIMessage ? fullAIMessage.concat(chunk) : chunk;
-
-      let parsedTools: ParsedToolCall[] = [];
-      try {
-        parsedTools = await toolParser.parseResult([
-          {
-            message: fullAIMessage,
-            text: contentToString(fullAIMessage.content),
-          },
-        ]);
-      } catch (_e) {
-        // 解析失败说明 JSON还不完整，忽略错误继续累计
-      }
-
-      if (parsedTools && parsedTools.length > 0) {
-        for (const toolCall of parsedTools) {
-          if (toolCall.type === "write_file" && toolCall.args?.content) {
-            const toolCallId =
-              toolCall.id || toolCall.args.filePath || "default";
-            const currentContent = String(toolCall.args.content);
-            const previousContent = printedLengths.get(toolCallId);
-            const previousLength = previousContent ?? 0;
-
-            if (previousContent === undefined) {
-              printedLengths.set(toolCallId, 0);
-              console.log(
-                chalk.blue(
-                  `[工具调用] write_file("${toolCall.args.filePath}") - 开始写入`,
-                ),
-              );
-            }
-
-            if (currentContent.length > previousLength) {
-              const newContent = currentContent.slice(previousLength);
-              process.stdout.write(newContent);
-              printedLengths.set(toolCallId, currentContent.length);
-            }
-          }
-        }
-      } else {
-        // 当前还没有解析到工具调用，如果有文本调用直接输出
-        if (chunk.content) {
-          process.stdout.write(
-            typeof chunk.content === "string"
-              ? chunk.content
-              : JSON.stringify(chunk.content),
-          );
-        }
-      }
-
+    if (!message.tool_calls?.length) {
+      return message.content;
     }
 
-    if (!fullAIMessage) {
-      continue;
-    }
-
-    // 此时 fullAIMessage 已经还原，直接存入 history
-    await history.addMessages([fullAIMessage]);
-    console.log("✅ 消息已添加到历史记录");
-
-    if (!fullAIMessage.tool_calls || fullAIMessage.tool_calls.length === 0) {
-      console.log(`✨ AI 最终回复： ${contentToString(fullAIMessage.content)}\n`);
-      return fullAIMessage.content;
-    }
-
-    // 处理工具调用
-    for (const toolCall of fullAIMessage.tool_calls) {
-      const foundTool = tools.find((t) => t.name === toolCall.name);
-      if (!foundTool) {
-        continue;
-      }
-
-      if (!toolCall.id) {
-        console.warn(`工具调用 ${toolCall.name} 缺少 id，已跳过`);
-        continue;
-      }
-
-      const toolResult = await (foundTool.invoke as any)(toolCall.args);
-      await history.addMessages([
-        new ToolMessage({
-          content: toolResult,
-          tool_call_id: toolCall.id,
-        }),
-      ]);
-    }
+    const toolMessages = await executeToolCalls(message);
+    await history.addMessages(toolMessages);
   }
-  const finalMessage = await history.getMessages();
-  return finalMessage[finalMessage.length - 1].content;
+
+  throw new Error(`达到最大迭代次数 ${maxIterations}，任务仍未完成`);
 }
 
-const case1 = `创建一个功能丰富的 React TodoList 应用：
+const task = `创建一个功能丰富的 React TodoList 应用：
 
-1. 创建项目：echo -e "n\nn" | pnpm create vite react-todo-app --template react-ts
+1. 创建项目：echo -e "n\\nn" | pnpm create vite react-todo-app --template react-ts
 2. 修改 src/App.tsx，实现完整功能的 TodoList：
   - 添加、删除、编辑、标记完成
   - 分类筛选（全部/进行中/已完成）
@@ -198,17 +249,17 @@ const case1 = `创建一个功能丰富的 React TodoList 应用：
   - 使用 CSS transitions
 5. 列出目录确认
 
-注意：使用 pnpm，功能要完整，样式要美观，要有动画效果
-
-去掉 main.tsx 里的 index.css 导入
+注意：使用 pnpm，功能要完整，样式要美观，要有动画效果。
+去掉 main.tsx 里的 index.css 导入。
 
 之后在 react-todo-app 项目中：
-  1. 使用 pnpm install 安装依赖
-  2. 使用 pnpm run dev 启动服务器
+1. 使用 pnpm install 安装依赖
+2. 使用 pnpm run dev 启动服务器
 `;
 
 try {
-  await runAgentWIthTools(case1);
+  await runAgentWithTools(task);
 } catch (error) {
-  console.error("错误:", error);
+  console.error(chalk.red("运行失败："), error);
+  process.exitCode = 1;
 }

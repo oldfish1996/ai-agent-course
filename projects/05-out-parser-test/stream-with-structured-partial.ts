@@ -22,11 +22,14 @@ const schema = z.object({
   famous_theory: z.string().describe("著名理论"),
 });
 
+// 使用output parser 实现流式打印
 const parser = StructuredOutputParser.fromZodSchema(schema);
 
 const prompt = `请介绍一下莫奈。 ${parser.getFormatInstructions()}`;
 
 console.log(`生成的提示词：\n ${prompt}`);
+
+console.log("=".repeat(50));
 
 try {
   const stream = await model.stream(prompt);

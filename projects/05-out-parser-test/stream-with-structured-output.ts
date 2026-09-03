@@ -30,6 +30,7 @@ try {
 
   let result = null;
   let chunkCount = 0;
+  // 这里只会有一个chunk，实际打印效果并不是流式输出
   for await (const chunk of stream) {
     chunkCount++;
     result = chunk;
