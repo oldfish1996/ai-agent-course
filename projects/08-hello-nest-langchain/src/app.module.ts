@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { BookModule } from './book/book.module.js';
+import { AiModule } from './ai/ai.module.js';
 
 @Module({
-  imports: [BookModule],
+  imports: [ConfigModule.forRoot({
+    isGlobal: true,
+    envFilePath: '.env',
+  }),AiModule],
   controllers: [AppController],
   providers: [AppService],
 })
