@@ -52,6 +52,25 @@ const queryUserTool = tool(
   },
 );
 
+type AiStreamEvent =
+  | { type: 'token'; data: { content: string } }
+  | {
+      type: 'tool_start';
+      data: { toolCallId: string; toolName: string; args: unknown };
+    }
+  | {
+      type: 'tool_end';
+      data: { toolCallId: string; result: string; toolName: string };
+    }
+  | {
+      type: 'tool_error';
+      data: { toolCallId: string; message: string; toolName: string };
+    }
+  | {
+      type: 'done';
+      data: Record<string, never>;
+    };
+
 @Injectable()
 export class AiService {
   private readonly modelWithTools: ReturnType<ChatOpenAI['bindTools']>;
@@ -112,7 +131,7 @@ export class AiService {
     }
   }
 
-  async *runChainStream(query: string) {
+  async *runChainStream(query: string): AsyncGenerator<AiStreamEvent> {
     const messages: BaseMessage[] = [
       new SystemMessage(
         '你是一个智能助手,可以在需要时调用工具(如query_user)来查询用户信息,再用结果回答用户的问题。',
@@ -132,8 +151,16 @@ export class AiService {
         const hasToolCallChunk =
           !!fullAIMessages?.tool_call_chunks &&
           fullAIMessages.tool_call_chunks.length > 0;
-        if (!hasToolCallChunk && chunk.content) {
-          yield chunk.content;
+        if (
+          !hasToolCallChunk &&
+          typeof chunk.content === 'string' &&
+          chunk.content.length > 0
+        ) {
+          // yield chunk.content;
+          yield {
+            type: 'token',
+            data: { content: chunk.content },
+          };
         }
       }
       if (!fullAIMessages) {
@@ -142,23 +169,59 @@ export class AiService {
       messages.push(fullAIMessages);
       const toolCalls = fullAIMessages.tool_calls ?? [];
       if (toolCalls.length === 0) {
+        yield {
+          type: 'done',
+          data: {},
+        };
         return;
       }
       for (const toolCall of toolCalls) {
         const toolCallId = toolCall.id || '';
         const toolName = toolCall.name || '';
-        const tool = toolMap.get(toolName);
-        if (!tool) {
+        const selectedTool = toolMap.get(toolName);
+        yield {
+          type: 'tool_start',
+          data: { toolCallId, toolName, args: toolCall.args },
+        };
+        if (!selectedTool) {
+          yield {
+            type: 'tool_error',
+            data: { toolCallId, toolName, message: `工具不存在: ${toolName}` },
+          };
           continue;
         }
-        const response = await tool.invoke(toolCall.args);
-        messages.push(
-          new ToolMessage({
-            tool_call_id: toolCallId,
-            content: response,
-            name: toolName,
-          }),
-        );
+        try {
+          const response = await selectedTool.invoke(toolCall.args);
+          yield {
+            type: 'tool_end',
+            data: { toolCallId, result: response, toolName },
+          };
+          messages.push(
+            new ToolMessage({
+              tool_call_id: toolCallId,
+              name: toolName,
+              content:
+                typeof response === 'string'
+                  ? response
+                  : JSON.stringify(response),
+            }),
+          );
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          console.error(message);
+          yield {
+            type: 'tool_error',
+            data: { toolCallId, toolName, message },
+          };
+          messages.push(
+            new ToolMessage({
+              tool_call_id: toolCallId,
+              content: `工具调用失败: ${message}`,
+              name: toolName,
+            }),
+          );
+        }
       }
     }
   }

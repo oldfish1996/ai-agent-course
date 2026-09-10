@@ -15,6 +15,8 @@ export class AiController {
   @Sse('chat/stream')
   chatStream(@Query('query') query: string) {
     const stream = this.aiService.runChainStream(query);
-    return from(stream).pipe(map((chunk) => ({ data: chunk })));
+    return from(stream).pipe(
+      map((event) => ({ type: event.type, data: event.data })),
+    );
   }
 }

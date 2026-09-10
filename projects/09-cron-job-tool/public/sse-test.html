@@ -1,158 +1,256 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SSE-Test</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSE-Test</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
 
-    body {
-      margin: 0;
-      padding: 40px 20px;
-      color: #1f2937;
-      background: #f3f4f6;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
+      body {
+        margin: 0;
+        padding: 40px 20px;
+        color: #1f2937;
+        background: #f3f4f6;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
 
-    main {
-      width: min(720px, 100%);
-      margin: 0 auto;
-    }
+      main {
+        width: min(720px, 100%);
+        margin: 0 auto;
+      }
 
-    h1 {
-      margin: 0 0 20px;
-      font-size: 24px;
-    }
+      h1 {
+        margin: 0 0 20px;
+        font-size: 24px;
+      }
 
-    form {
-      display: flex;
-      gap: 10px;
-    }
+      form {
+        display: flex;
+        gap: 10px;
+      }
 
-    input {
-      min-width: 0;
-      flex: 1;
-      height: 42px;
-      padding: 0 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      font: inherit;
-      outline: none;
-    }
+      input {
+        min-width: 0;
+        flex: 1;
+        height: 42px;
+        padding: 0 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font: inherit;
+        outline: none;
+      }
 
-    input:focus {
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgb(37 99 235 / 12%);
-    }
+      input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgb(37 99 235 / 12%);
+      }
 
-    button {
-      height: 42px;
-      padding: 0 18px;
-      border: 0;
-      border-radius: 6px;
-      color: #fff;
-      background: #2563eb;
-      font: inherit;
-      cursor: pointer;
-    }
+      button {
+        height: 42px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 6px;
+        color: #fff;
+        background: #2563eb;
+        font: inherit;
+        cursor: pointer;
+      }
 
-    button:disabled {
-      cursor: not-allowed;
-      opacity: 0.55;
-    }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
 
-    .status {
-      min-height: 24px;
-      margin: 14px 0 6px;
-      color: #64748b;
-      font-size: 14px;
-    }
+      .status {
+        min-height: 24px;
+        margin: 14px 0 6px;
+        color: #64748b;
+        font-size: 14px;
+      }
 
-    .answer {
-      min-height: 180px;
-      margin: 0;
-      padding: 16px;
-      overflow-wrap: anywhere;
-      white-space: pre-wrap;
-      border: 1px solid #dbe1e8;
-      border-radius: 6px;
-      background: #fff;
-      font: 15px/1.7 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>SSE 流式响应测试</h1>
+      .answer {
+        min-height: 180px;
+        margin: 0;
+        padding: 16px;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+        border: 1px solid #dbe1e8;
+        border-radius: 6px;
+        background: #fff;
+        font:
+          15px/1.7 system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
 
-    <form id="chat-form">
-      <input
-        id="query"
-        name="query"
-        type="text"
-        placeholder="请输入问题"
-        autocomplete="off"
-        required
-      >
-      <button id="submit" type="submit">发送</button>
-    </form>
+      .tools {
+        display: grid;
+        gap: 8px;
+        margin: 12px 0;
+      }
 
-    <div id="status" class="status">等待提问</div>
-    <pre id="answer" class="answer"></pre>
-  </main>
+      .tool-item {
+        padding: 12px;
+        border: 1px solid #dbe1e8;
+        border-radius: 6px;
+        background: #fff;
+        font-size: 14px;
+      }
 
-  <script>
-    const form = document.querySelector('#chat-form');
-    const queryInput = document.querySelector('#query');
-    const submitButton = document.querySelector('#submit');
-    const status = document.querySelector('#status');
-    const answer = document.querySelector('#answer');
+      .tool-item.running {
+        border-color: #f59e0b;
+      }
 
-    let eventSource = null;
-    let hasReceivedData = false;
+      .tool-item.success {
+        border-color: #22c55e;
+      }
 
-    function finish(message) {
-      eventSource?.close();
-      eventSource = null;
-      submitButton.disabled = false;
-      status.textContent = message;
-    }
+      .tool-item.failed {
+        border-color: #ef4444;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>SSE 流式响应测试</h1>
 
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
+      <form id="chat-form">
+        <input
+          id="query"
+          name="query"
+          type="text"
+          placeholder="请输入问题"
+          autocomplete="off"
+          required
+        />
+        <button id="submit" type="submit">发送</button>
+      </form>
 
-      const query = queryInput.value.trim();
-      if (!query) return;
+      <div id="status" class="status">等待提问</div>
+      <div id="tools" class="tools"></div>
+      <pre id="answer" class="answer"></pre>
+    </main>
 
-      eventSource?.close();
-      answer.textContent = '';
-      status.textContent = '正在连接...';
-      submitButton.disabled = true;
-      hasReceivedData = false;
+    <script>
+      const form = document.querySelector('#chat-form');
+      const queryInput = document.querySelector('#query');
+      const submitButton = document.querySelector('#submit');
+      const status = document.querySelector('#status');
+      const answer = document.querySelector('#answer');
 
-      const url = `/ai/chat/stream?query=${encodeURIComponent(query)}`;
-      eventSource = new EventSource(url);
+      const tools = document.querySelector('#tools');
+      const toolElements = new Map();
 
-      eventSource.onopen = () => {
-        status.textContent = '正在接收...';
-      };
+      let eventSource = null;
+      let hasReceivedData = false;
 
-      eventSource.onmessage = (event) => {
-        hasReceivedData = true;
-        answer.textContent += event.data;
-      };
+      function escapeHtml(value) {
+        const element = document.createElement('div');
+        element.textContent = String(value);
+        return element.innerHTML;
+      }
 
-      eventSource.onerror = () => {
-        finish(hasReceivedData ? '接收完成' : '连接失败，请检查服务是否正常运行');
-      };
-    });
+      function finish(message) {
+        eventSource?.close();
+        eventSource = null;
+        submitButton.disabled = false;
+        status.textContent = message;
+      }
 
-    window.addEventListener('beforeunload', () => {
-      eventSource?.close();
-    });
-  </script>
-</body>
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        tools.innerHTML = '';
+        toolElements.clear();
+
+        const query = queryInput.value.trim();
+        if (!query) return;
+
+        eventSource?.close();
+        answer.textContent = '';
+        status.textContent = '正在连接...';
+        submitButton.disabled = true;
+        hasReceivedData = false;
+
+        const url = `/ai/chat/stream?query=${encodeURIComponent(query)}`;
+        eventSource = new EventSource(url);
+
+        eventSource.addEventListener('token', (event) => {
+          const payload = JSON.parse(event.data);
+          hasReceivedData = true;
+          answer.textContent += payload.content;
+        });
+
+        eventSource.addEventListener('tool_start', (event) => {
+          const payload = JSON.parse(event.data);
+          const element = document.createElement('div');
+          element.classList.add('tool-item', 'running');
+          element.innerHTML = `
+          <div>正在调用：<strong>${escapeHtml(payload.toolName)}</strong></div>
+          <pre>${escapeHtml(JSON.stringify(payload.args, null, 2))}</pre>`;
+          tools.appendChild(element);
+          toolElements.set(payload.toolCallId, element);
+        });
+
+        eventSource.addEventListener('tool_end', (event) => {
+          const payload = JSON.parse(event.data);
+          const element = toolElements.get(payload.toolCallId);
+          if (element) {
+            element.className = 'tool-item success';
+            element.innerHTML += `
+            <div>调用完成：<strong>${escapeHtml(payload.toolName)}</strong></div>
+            <pre>${escapeHtml(
+              typeof payload.result === 'string'
+                ? payload.result
+                : JSON.stringify(payload.result, null, 2),
+            )}</pre>`;
+          }
+        });
+
+        eventSource.addEventListener('tool_error', (event) => {
+          const payload = JSON.parse(event.data);
+          const element = toolElements.get(payload.toolCallId);
+          if (element) {
+            element.className = 'tool-item failed';
+            element.innerHTML += `
+            <div>调用失败：<strong>${escapeHtml(payload.toolName)}</strong></div>
+            <pre>${escapeHtml(payload.message)}</pre>`;
+          }
+        });
+
+        eventSource.addEventListener('done', () => {
+          finish('接收完成');
+        });
+
+        eventSource.onopen = () => {
+          status.textContent = '正在接收...';
+        };
+
+        // eventSource.onmessage = (event) => {
+        //   hasReceivedData = true;
+        //   answer.textContent += event.data;
+        // };
+
+        eventSource.onerror = () => {
+          finish(
+            hasReceivedData ? '接收完成' : '连接失败，请检查服务是否正常运行',
+          );
+        };
+      });
+
+      window.addEventListener('beforeunload', () => {
+        eventSource?.close();
+      });
+    </script>
+  </body>
 </html>

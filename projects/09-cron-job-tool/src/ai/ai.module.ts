@@ -135,18 +135,18 @@ import chalk from 'chalk';
               if (json.code !== 200 || !json.data) {
                 return `搜索失败: ${json.code} ${json.msg}`;
               }
-              const webpages = json.data.webpages?.values || [];
+              const webpages = json.data.webPages?.value || [];
               if (webpages.length === 0) {
                 return `搜索失败: 没有搜索结果`;
               }
               const formatted = webpages
                 .map(
                   (w: any, i: number) => `引用:${i + 1} 
-                标题:${w.title} 
+                标题:${w.name} 
                 链接:${w.url}
                 摘要:${w.summary}
-                网站名称:${w.site_name}
-                发布时间:${w.publish_time}`,
+                网站名称:${w.siteName}
+                发布时间:${w.datePublished}`,
                 )
                 .join('\n');
               return formatted;
