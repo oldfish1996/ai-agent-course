@@ -76,6 +76,21 @@
         font-size: 14px;
       }
 
+      .query {
+        margin: 12px 0;
+        padding: 12px 16px;
+        border-left: 4px solid #2563eb;
+        border-radius: 6px;
+        color: #1e3a8a;
+        background: #eff6ff;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+      }
+
+      .query:empty {
+        display: none;
+      }
+
       .answer {
         min-height: 180px;
         margin: 0;
@@ -137,6 +152,7 @@
       </form>
 
       <div id="status" class="status">等待提问</div>
+      <div id="query-display" class="query"></div>
       <div id="tools" class="tools"></div>
       <pre id="answer" class="answer"></pre>
     </main>
@@ -147,6 +163,8 @@
       const submitButton = document.querySelector('#submit');
       const status = document.querySelector('#status');
       const answer = document.querySelector('#answer');
+
+      const queryDOM = document.querySelector('#query-display');
 
       const tools = document.querySelector('#tools');
       const toolElements = new Map();
@@ -181,6 +199,9 @@
         status.textContent = '正在连接...';
         submitButton.disabled = true;
         hasReceivedData = false;
+
+        queryDOM.textContent = query;
+        queryInput.value = '';
 
         const url = `/ai/chat/stream?query=${encodeURIComponent(query)}`;
         eventSource = new EventSource(url);

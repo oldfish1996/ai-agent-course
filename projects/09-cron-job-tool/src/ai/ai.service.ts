@@ -1,4 +1,4 @@
-import { tool } from '@langchain/core/tools';
+import { tool, type StructuredToolInterface } from '@langchain/core/tools';
 import { Inject, Injectable } from '@nestjs/common';
 import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
@@ -78,14 +78,19 @@ export class AiService {
   constructor(
     @Inject('CHAT_MODEL') private readonly model: ChatOpenAI,
     @Inject('USER_MANAGER_TOOL')
-    private readonly queryUserTool: any,
-    @Inject('SEND_MAIL_TOOL') private readonly sendMailTool: any,
-    @Inject('WEB_SEARCH_TOOL') private readonly webSearchTool: any,
+    private readonly queryUserTool: StructuredToolInterface,
+    @Inject('SEND_MAIL_TOOL')
+    private readonly sendMailTool: StructuredToolInterface,
+    @Inject('WEB_SEARCH_TOOL')
+    private readonly webSearchTool: StructuredToolInterface,
+    @Inject('DB_USERS_CRUD_TOOL')
+    private readonly dbUsersCrudTool: StructuredToolInterface,
   ) {
     this.modelWithTools = this.model.bindTools([
       this.queryUserTool,
       this.sendMailTool,
       this.webSearchTool,
+      this.dbUsersCrudTool,
     ]);
   }
 
@@ -142,6 +147,7 @@ export class AiService {
       ['query_user', this.queryUserTool],
       ['send_mail', this.sendMailTool],
       ['web_search', this.webSearchTool],
+      ['db_users_crud', this.dbUsersCrudTool],
     ]);
     while (true) {
       const stream = await this.modelWithTools.stream(messages);

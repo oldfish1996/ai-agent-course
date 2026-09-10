@@ -2,11 +2,14 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatOpenAI } from '@langchain/openai';
 import { AiService } from './ai.service.js';
+// 下面这两个user不一样
 import { UserService } from './user.service.js';
+import { UsersService } from '../users/users.service.js';
 import { AiController } from './ai.controller.js';
 import { z } from 'zod';
 import { tool } from '@langchain/core/tools';
 import { MailerService } from '@nestjs-modules/mailer';
+import { UsersModule } from '../users/users.module.js';
 import chalk from 'chalk';
 
 @Module({
@@ -16,6 +19,7 @@ import chalk from 'chalk';
     UserService,
     {
       provide: 'CHAT_MODEL',
+      inject: [ConfigService],
       useFactory: (configService: ConfigService) =>
         new ChatOpenAI({
           temperature: 0.7,
@@ -25,10 +29,10 @@ import chalk from 'chalk';
             baseURL: configService.get('OPENAI_BASE_URL'),
           },
         }),
-      inject: [ConfigService],
     },
     {
       provide: 'USER_MANAGER_TOOL',
+      inject: [UserService],
       useFactory: (userService: UserService) => {
         const queryUserArgsSchema = z.object({
           userId: z.string().describe('用户ID, 例如: 001'),
@@ -52,7 +56,6 @@ import chalk from 'chalk';
           },
         );
       },
-      inject: [UserService],
     },
     {
       provide: 'SEND_MAIL_TOOL',
@@ -69,7 +72,7 @@ import chalk from 'chalk';
         });
         return tool(
           async ({ to, subject, text, html }) => {
-            console.log(chalk.bgGreen(`SEND_MAIL_TOOL ${to} ${subject}`));
+            console.log(chalk.bgBlue(`SEND_MAIL_TOOL ${to} ${subject}`));
             const fallbackFrom = configService.get('MAIL_FROM');
             await mailerService.sendMail({
               to,
@@ -104,7 +107,7 @@ import chalk from 'chalk';
         });
         return tool(
           async ({ query, count }) => {
-            console.log(chalk.bgGreen(`WEB_SEARCH_TOOL ${query}`));
+            console.log(chalk.bgCyan(`WEB_SEARCH_TOOL ${query}`));
             const apiKey = configService.get('BOCHAT_API_KEY');
             const url = 'https://api.bochaai.com/v1/web-search';
             const body = {
@@ -163,6 +166,92 @@ import chalk from 'chalk';
         );
       },
     },
+    {
+      provide: 'DB_USERS_CRUD_TOOL',
+      inject: [UsersService],
+      useFactory: (userService: UsersService) => {
+        const dbUsersCrudArgsSchema = z.object({
+          action: z
+            .enum(['create', 'list', 'get', 'update', 'delete'])
+            .describe('操作类型'),
+          id: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe('用户ID （get/update/delete的时候需要提供）'),
+          name: z.string().describe('用户姓名（create/update的时候需要提供）'),
+          email: z.email().describe('用户邮箱（create/update的时候需要提供）'),
+        });
+
+        return tool(
+          async ({ action, id, name, email }) => {
+            console.log(
+              chalk.bgYellow(
+                `DB_USERS_CRUD_TOOL ${action} ${id} ${name} ${email}`,
+              ),
+            );
+            switch (action) {
+              case 'create': {
+                if (!name || !email) {
+                  return `创建用户失败: 缺少姓名或邮箱`;
+                }
+                const created = await userService.create({
+                  name,
+                  email,
+                });
+                return `创建用户 ${created.name} (邮箱: ${created.email})`;
+              }
+              case 'list': {
+                const users = await userService.findAll();
+                return `用户列表: ${JSON.stringify(users)}`;
+              }
+              case 'get': {
+                if (!id) {
+                  return `获取用户失败: 缺少用户ID`;
+                }
+                const u = await userService.findOne(id);
+                if (!u) {
+                  return `用户 ${id} 不存在`;
+                }
+                return `用户 ${id} 信息： ${JSON.stringify(u)}`;
+              }
+
+              case 'update': {
+                if (!id || !name || !email) {
+                  return `更新用户失败: 缺少用户ID, 姓名或邮箱`;
+                }
+                const updated = await userService.update(id, {
+                  name,
+                  email,
+                });
+                return `更新用户 ${id} (姓名: ${name}, 邮箱: ${email})`;
+              }
+              case 'delete': {
+                if (!id) {
+                  return `删除用户失败: 缺少用户ID`;
+                }
+                const exist = await userService.findOne(id);
+                if (!exist) {
+                  return `用户 ${id} 不存在`;
+                }
+                await userService.remove(id);
+                return `删除用户 ${id} (姓名: ${exist.name}, 邮箱: ${JSON.stringify(exist)}`;
+              }
+              default:
+                return `未知操作: ${action}`;
+            }
+          },
+          {
+            name: 'db_users_crud',
+            description:
+              '对数据库中的用户表进行CRUD操作,通过 action字段选择 create/list/get/update/delete,并按需提供 id、name、email等参数。',
+            schema: dbUsersCrudArgsSchema,
+          },
+        );
+      },
+    },
   ],
+  imports: [UsersModule],
 })
 export class AiModule {}
