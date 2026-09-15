@@ -27,6 +27,8 @@
     "html-to-text": "^10.0.0",
     "js-tiktoken": "^1.0.21",
     "mysql2": "^3.22.5",
+    "tencentcloud-sdk-nodejs": "^4.1.310",
+    "ws": "^8.21.3",
     "zod": "^4.4.3",
     "zod-to-json-schema": "^3.25.2"
   },

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebSocket 测试</title>
+  </head>
+  <body>
+    <div>
+      <input type="text" id="message-input" placeholder="请输入消息" />
+      <button id="send-button">发送</button>
+      <ul id="messages"></ul>
+
+      <script>
+        const socket = new WebSocket("ws://localhost:8001");
+        const input = document.getElementById("message-input");
+        const sendButton = document.getElementById("send-button");
+        const messageList = document.getElementById("messages");
+
+        socket.addEventListener("open", () => {
+          console.log("WebSocket 连接成功");
+        });
+
+        socket.addEventListener("message", (event) => {
+          const message = JSON.parse(event.data);
+          const item = document.createElement("li");
+          item.textContent = message.type === "chat"
+            ? `${message.username}: ${message.content}`
+            : message.content;
+          messageList.appendChild(item);
+        });
+
+        sendButton.addEventListener("click", () => {
+          if(socket.readyState !== WebSocket.OPEN) {
+            console.error("WebSocket 连接未打开");
+            return;
+          }
+          socket.send(JSON.stringify({
+            type: "chat",
+            content: input.value,
+            username: "chen",
+          }));
+          input.value = "";
+        });
+      </script>
+      </script>
+    </div>
+  </body>
+</html>
