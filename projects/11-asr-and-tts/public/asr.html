@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>asr 录音测试</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #18201c;
+        background: #f4f6f5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        width: min(680px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 72px 0;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 32px;
+        color: #5a655f;
+        line-height: 1.7;
+      }
+
+      code {
+        padding: 2px 6px;
+        border: 1px solid #d7ddda;
+        border-radius: 4px;
+        color: #24563e;
+        background: #fff;
+        font-family: 'SFMono-Regular', Consolas, monospace;
+        font-size: 0.9em;
+      }
+
+      button {
+        min-width: 132px;
+        min-height: 44px;
+        margin: 0 8px 16px 0;
+        padding: 10px 18px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background-color 160ms ease,
+          border-color 160ms ease,
+          transform 160ms ease;
+      }
+
+      button:not(:disabled):active {
+        transform: translateY(1px);
+      }
+
+      button:focus-visible {
+        outline: 3px solid rgba(38, 113, 76, 0.25);
+        outline-offset: 2px;
+      }
+
+      #start-btn {
+        color: #fff;
+        background: #26714c;
+      }
+
+      #start-btn:not(:disabled):hover {
+        background: #1e5c3d;
+      }
+
+      #stop-btn {
+        color: #fff;
+        background: #b8473d;
+      }
+
+      #stop-btn:not(:disabled):hover {
+        background: #99382f;
+      }
+
+      button:disabled {
+        color: #929a96;
+        border-color: #d9dedb;
+        background: #e9ecea;
+        cursor: not-allowed;
+      }
+
+      #status {
+        margin-top: 8px;
+        padding: 13px 16px;
+        border-left: 4px solid #26714c;
+        border-radius: 0 6px 6px 0;
+        color: #344039;
+        background: #e5eee9;
+        font-size: 14px;
+      }
+
+      h3 {
+        margin: 36px 0 12px;
+        font-size: 16px;
+        letter-spacing: 0;
+      }
+
+      #result {
+        min-height: 140px;
+        margin: 0;
+        padding: 18px;
+        overflow-x: auto;
+        border: 1px solid #d7ddda;
+        border-radius: 6px;
+        color: #28312c;
+        background: #fff;
+        font-family: 'SFMono-Regular', Consolas, monospace;
+        font-size: 14px;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      @media (max-width: 520px) {
+        body {
+          width: min(100% - 28px, 680px);
+          padding: 40px 0;
+        }
+
+        h1 {
+          font-size: 27px;
+        }
+
+        button {
+          width: 100%;
+          margin-right: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>asr 录音测试</h1>
+    <p>点击开始录音，结束后自动上传到 <code>/speech/asr</code></p>
+    <button id="start-btn">开始录音</button>
+    <button id="stop-btn" disabled>停止并上传</button>
+    <div id="status">状态：未开始</div>
+    <h3>识别结果：</h3>
+    <pre id="result">(暂无)</pre>
+
+    <script>
+      const startBtn = document.querySelector('#start-btn');
+      const stopBtn = document.querySelector('#stop-btn');
+      const status = document.querySelector('#status');
+      const result = document.querySelector('#result');
+
+      const audioInput = document.querySelector('#audio-input');
+      const asrForm = document.querySelector('#asr-form');
+      const statusText = document.querySelector('#status');
+
+      let mediaRecorder = null;
+      let chunks = [];
+      const recordFilename = 'record.ogg';
+
+      function setStatus(text) {
+        statusText.textContent = text;
+      }
+
+      startBtn.addEventListener('click', async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          const preferMimeType = 'audio/ogg;codecs=opus';
+          mediaRecorder = MediaRecorder.isTypeSupported(preferMimeType)
+            ? new MediaRecorder(stream, { mimeType: preferMimeType })
+            : new MediaRecorder(stream);
+          const preferAudio = stream.getAudioTracks()[0];
+          preferAudio.mimeType = preferMimeType;
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data?.size > 0) {
+              chunks.push(e.data);
+            }
+          };
+
+          mediaRecorder.onstop = async () => {
+            setStatus('状态：录音结束，正在上传...');
+            try {
+              const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+              if (!blob.size) {
+                throw new Error('录音为空');
+              }
+              const formData = new FormData();
+              formData.append('audio', blob, recordFilename);
+
+              const response = await fetch('/speech/asr', {
+                method: 'POST',
+                body: formData,
+              });
+
+              if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`上传失败：${text}`);
+              }
+
+              const data = await response.json();
+              result.textContent = data.text || '(空结果)';
+              setStatus('状态：上传成功');
+            } catch (error) {
+              setStatus('状态：上传失败');
+            } finally {
+              stream.getTracks().forEach((track) => track.stop());
+            }
+          };
+
+          mediaRecorder.start(250);
+          setStatus('状态：录音中');
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+        } catch (error) {
+          statusText.textContent = '状态：录音失败';
+          return;
+        }
+      });
+
+      stopBtn.addEventListener('click', () => {
+        if (!mediaRecorder) {
+          return;
+        }
+        mediaRecorder.stop();
+        setStatus('状态：录音已停止');
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      });
+    </script>
+  </body>
+</html>

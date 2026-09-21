@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI语音助手测试</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page-bg: #edf1f5;
+        --surface: #ffffff;
+        --chat-bg: #f7f8fa;
+        --border: #dce2e8;
+        --text: #18212b;
+        --muted: #697586;
+        --primary: #176b5b;
+        --primary-hover: #105548;
+        --answer-bg: #e9eef2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        min-height: 100vh;
+        padding: 24px;
+        color: var(--text);
+        background: var(--page-bg);
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .chat-app {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        width: min(860px, 100%);
+        height: calc(100vh - 48px);
+        min-height: 0;
+        margin: 0 auto;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: 0 18px 48px rgb(33 44 58 / 12%);
+      }
+
+      .chat-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 70px;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .brand {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        place-items: center;
+        border-radius: 50%;
+        color: #fff;
+        background: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .header-copy {
+        min-width: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.35;
+      }
+
+      #status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 20px;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      #status::before {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #34a853;
+        content: '';
+      }
+
+      #chat {
+        min-height: 0;
+        padding: 28px 54px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background: var(--chat-bg);
+        scroll-behavior: smooth;
+      }
+
+      #chat:empty::before {
+        display: block;
+        width: min(420px, 100%);
+        margin: 18vh auto 0;
+        color: var(--muted);
+        text-align: center;
+        content: '输入一个问题，开始与 AI 助手对话';
+      }
+
+      .question,
+      .answer {
+        position: relative;
+        width: fit-content;
+        max-width: min(72%, 600px);
+        margin-bottom: 20px;
+        padding: 11px 14px;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+        border: 1px solid var(--border);
+        border-radius: 7px 7px 7px 2px;
+        font-size: 15px;
+        line-height: 1.65;
+      }
+
+      .question {
+        margin-left: auto;
+        border-color: var(--primary);
+        border-radius: 7px 7px 2px;
+        color: #fff;
+        background: var(--primary);
+      }
+
+      .answer {
+        margin-right: auto;
+        padding-left: 14px;
+        background: var(--answer-bg);
+      }
+
+      .question::before,
+      .answer::before {
+        position: absolute;
+        top: 50%;
+        display: grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        border-radius: 50%;
+        color: #fff;
+        background: #3f4b5c;
+        font-size: 11px;
+        font-weight: 700;
+        transform: translateY(-50%);
+      }
+
+      .question::before {
+        right: -40px;
+        background: var(--primary);
+        content: '你';
+      }
+
+      .answer::before {
+        left: -40px;
+        content: 'AI';
+      }
+
+      .composer {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 18px 18px;
+        border-top: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      #query {
+        min-width: 0;
+        height: 46px;
+        flex: 1;
+        padding: 0 15px;
+        border: 1px solid #c7ced8;
+        border-radius: 6px;
+        color: var(--text);
+        background: #fff;
+        outline: none;
+      }
+
+      #query:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgb(23 107 91 / 12%);
+      }
+
+      #voice-btn,
+      #send-btn {
+        height: 46px;
+        padding: 0 22px;
+        border: 1px solid var(--primary);
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 150ms ease;
+      }
+
+      #voice-btn {
+        color: var(--primary);
+        background: #fff;
+      }
+
+      /* #voice-btn:hover:not(:disabled) {
+        background: rgb(23 107 91 / 8%);
+      } */
+
+      #voice-btn.is-recording {
+        /* color: #fff; */
+        border-color: transparent;
+        background:
+          linear-gradient(#fff, #fff) padding-box,
+          linear-gradient(
+              90deg,
+              #00e5ff,
+              #7c4dff,
+              #ff4ecd,
+              #ffe66d,
+              #39ff88,
+              #00e5ff
+            )
+            border-box;
+        background-size:
+          100% 100%,
+          300% 100%;
+        animation: recording-border 1.4s linear infinite;
+      }
+
+      #voice-btn.is-recording::before {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        margin-right: 8px;
+        border-radius: 50%;
+        background: currentcolor;
+        content: '';
+        animation: recording-dot 1s ease-in-out infinite;
+      }
+
+      #send-btn {
+        color: #fff;
+        background: var(--primary);
+      }
+
+      #send-btn:hover:not(:disabled) {
+        background: var(--primary-hover);
+      }
+
+      #voice-btn:disabled,
+      #send-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      @keyframes recording-border {
+        0% {
+          background-position:
+            0 0,
+            0% 0;
+          box-shadow: 0 0 6px rgb(0 229 255 / 42%);
+        }
+
+        50% {
+          box-shadow: 0 0 10px rgb(124 77 255 / 52%);
+        }
+
+        100% {
+          background-position:
+            0 0,
+            100% 0;
+          box-shadow: 0 0 6px rgb(255 78 205 / 42%);
+        }
+      }
+
+      @keyframes recording-dot {
+        0%,
+        100% {
+          opacity: 1;
+        }
+
+        50% {
+          opacity: 0.35;
+        }
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 0;
+        }
+
+        .chat-app {
+          width: 100%;
+          height: 100vh;
+          min-height: 0;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+
+        .chat-header {
+          padding-inline: 16px;
+        }
+
+        #chat {
+          padding: 22px 54px;
+        }
+
+        .question,
+        .answer {
+          max-width: 88%;
+        }
+
+        .composer {
+          padding: 12px;
+        }
+
+        #voice-btn,
+        #send-btn {
+          padding-inline: 17px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #chat {
+          scroll-behavior: auto;
+        }
+
+        #voice-btn.is-recording,
+        #voice-btn.is-recording::before {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="chat-app">
+      <header class="chat-header">
+        <div class="brand" aria-hidden="true">AI</div>
+        <div class="header-copy">
+          <h1>AI 语音助手</h1>
+          <div id="status" role="status">在线，等待提问</div>
+        </div>
+      </header>
+
+      <section id="chat" aria-live="polite"></section>
+
+      <div class="composer">
+        <input
+          id="query"
+          type="text"
+          placeholder="输入问题发送或者语音输入"
+          aria-label="输入问题"
+        />
+        <button id="voice-btn" type="button" aria-pressed="false">
+          语音输入
+        </button>
+        <button id="send-btn" type="button">发送</button>
+      </div>
+    </main>
+
+    <script>
+      const statusText = document.getElementById('status');
+      const queryInput = document.getElementById('query');
+      const sendBtn = document.getElementById('send-btn');
+
+      const voiceBtn = document.getElementById('voice-btn');
+
+      const chat = document.getElementById('chat');
+
+      let eventSource = null;
+      let hasReceivedData = false;
+
+      function finish() {
+        eventSource?.close();
+        eventSource = null;
+        sendBtn.disabled = false;
+        voiceBtn.disabled = false;
+        queryInput.focus();
+      }
+
+      function sendQuery(value = queryInput.value) {
+        const query = value.trim();
+        if (!query || eventSource) {
+          return;
+        }
+
+        sendBtn.disabled = true;
+        voiceBtn.disabled = true;
+        hasReceivedData = false;
+        queryInput.value = '';
+
+        const question = document.createElement('div');
+        question.classList.add('question');
+        question.textContent = query;
+        chat.appendChild(question);
+        chat.scrollTop = chat.scrollHeight;
+
+        const url = `/ai/chat/stream?query=${encodeURIComponent(query)}`;
+        eventSource = new EventSource(url);
+
+        const answer = document.createElement('div');
+        answer.classList.add('answer');
+        chat.appendChild(answer);
+
+        eventSource.onopen = () => {
+          statusText.textContent = '正在生成回答...';
+          answer.textContent = '正在思考...';
+        };
+
+        eventSource.onmessage = (event) => {
+          if (!hasReceivedData) {
+            answer.textContent = '';
+            hasReceivedData = true;
+          }
+          answer.textContent += event.data;
+          chat.scrollTop = chat.scrollHeight;
+        };
+
+        eventSource.onerror = () => {
+          if (!hasReceivedData) {
+            answer.textContent = '连接失败，请检查服务是否正常运行';
+          }
+          statusText.textContent = hasReceivedData
+            ? '回答完成'
+            : '连接失败，请检查服务是否正常运行';
+          finish();
+        };
+      }
+
+      sendBtn.addEventListener('click', () => {
+        sendQuery();
+      });
+
+      queryInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.isComposing) {
+          sendBtn.click();
+        }
+      });
+
+      const recordingFormats = [
+        {
+          mimeType: 'audio/ogg;codecs=opus',
+          extension: 'ogg',
+        },
+        {
+          mimeType: 'audio/mp4;codecs=mp4a.40.2',
+          extension: 'm4a',
+        },
+        {
+          mimeType: 'audio/mp4',
+          extension: 'm4a',
+        },
+      ];
+
+      let mediaRecorder = null;
+      let mediaStream = null;
+      let audioChunks = [];
+      let isUploading = false;
+
+      function releaseRecording() {
+        mediaStream?.getTracks().forEach((track) => track.stop());
+        mediaStream = null;
+        mediaRecorder = null;
+        audioChunks = [];
+        isUploading = false;
+        voiceBtn.textContent = '语音输入';
+        voiceBtn.classList.remove('is-recording');
+        voiceBtn.setAttribute('aria-pressed', 'false');
+      }
+
+      const recordVoice = async () => {
+        if (
+          !navigator.mediaDevices?.getUserMedia ||
+          typeof MediaRecorder === 'undefined'
+        ) {
+          statusText.textContent = '当前浏览器不支持录音';
+          return;
+        }
+
+        const format = recordingFormats.find(({ mimeType }) =>
+          MediaRecorder.isTypeSupported(mimeType),
+        );
+        if (!format) {
+          statusText.textContent = '当前浏览器不支持 OGG 或 MP4 录音';
+          return;
+        }
+
+        voiceBtn.disabled = true;
+        sendBtn.disabled = true;
+        statusText.textContent = '正在请求麦克风权限...';
+
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          audioChunks = [];
+          const recorder = new MediaRecorder(mediaStream, {
+            mimeType: format.mimeType,
+          });
+          mediaRecorder = recorder;
+
+          recorder.ondataavailable = (event) => {
+            if (event.data?.size > 0) {
+              audioChunks.push(event.data);
+            }
+          };
+
+          recorder.onerror = (event) => {
+            console.error('录音失败', event.error);
+            statusText.textContent = '录音失败，请重试';
+          };
+
+          recorder.onstop = async () => {
+            isUploading = true;
+            statusText.textContent = '录音结束，正在上传...';
+            let recognizedText = '';
+
+            try {
+              const mimeType = recorder.mimeType || format.mimeType;
+              const blob = new Blob(audioChunks, { type: mimeType });
+              if (!blob.size) {
+                throw new Error('录音为空');
+              }
+
+              const formData = new FormData();
+              formData.append('audio', blob, `record.${format.extension}`);
+
+              const response = await fetch('/speech/asr', {
+                method: 'POST',
+                body: formData,
+              });
+
+              if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`上传失败：${text}`);
+              }
+
+              const data = await response.json();
+              recognizedText = String(data.text ?? '').trim();
+              if (!recognizedText) {
+                throw new Error('未识别到有效文字');
+              }
+              statusText.textContent = '识别完成，正在发送...';
+            } catch (error) {
+              console.error(error);
+              statusText.textContent =
+                error instanceof Error ? error.message : '录音识别失败';
+            } finally {
+              releaseRecording();
+              sendBtn.disabled = false;
+              voiceBtn.disabled = false;
+            }
+
+            if (recognizedText) {
+              sendQuery(recognizedText);
+            }
+          };
+
+          recorder.start(250);
+          voiceBtn.textContent = '结束并发送';
+          voiceBtn.classList.add('is-recording');
+          voiceBtn.setAttribute('aria-pressed', 'true');
+          voiceBtn.disabled = false;
+          statusText.textContent = '录音中';
+        } catch (error) {
+          console.error(error);
+          releaseRecording();
+          sendBtn.disabled = false;
+          voiceBtn.disabled = false;
+          statusText.textContent =
+            error instanceof DOMException && error.name === 'NotAllowedError'
+              ? '麦克风权限被拒绝'
+              : '录音启动失败';
+        }
+      };
+
+      const stopRecord = () => {
+        if (mediaRecorder?.state !== 'recording') {
+          return;
+        }
+
+        voiceBtn.disabled = true;
+        voiceBtn.classList.remove('is-recording');
+        voiceBtn.setAttribute('aria-pressed', 'false');
+        mediaRecorder.stop();
+        statusText.textContent = '正在结束录音...';
+      };
+
+      voiceBtn.addEventListener('click', () => {
+        if (isUploading) {
+          return;
+        }
+
+        if (mediaRecorder?.state === 'recording') {
+          stopRecord();
+        } else {
+          void recordVoice();
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        eventSource?.close();
+        if (mediaRecorder?.state === 'recording') {
+          mediaRecorder.stop();
+        }
+        mediaStream?.getTracks().forEach((track) => track.stop());
+      });
+    </script>
+  </body>
+</html>
