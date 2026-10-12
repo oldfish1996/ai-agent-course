@@ -154,7 +154,56 @@
       .answer {
         margin-right: auto;
         padding-left: 14px;
+        padding-right: 52px;
         background: var(--answer-bg);
+      }
+
+      .speech-indicator {
+        position: absolute;
+        top: 7px;
+        right: 7px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: 1px solid rgb(23 107 91 / 18%);
+        border-radius: 50%;
+        color: var(--primary);
+        background: #fff;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgb(23 107 91 / 10%);
+      }
+
+      .speech-indicator[hidden] {
+        display: none;
+      }
+
+      .speech-indicator:hover,
+      .speech-indicator:focus-visible {
+        background: rgb(23 107 91 / 8%);
+      }
+
+      .speech-indicator span {
+        width: 3px;
+        height: 8px;
+        border-radius: 3px;
+        background: currentcolor;
+        animation: none;
+      }
+
+      .speech-indicator.is-playing span {
+        animation: speaking-bars 850ms ease-in-out infinite alternate;
+      }
+
+      .speech-indicator span:nth-child(2) {
+        animation-delay: 180ms;
+      }
+
+      .speech-indicator span:nth-child(3) {
+        animation-delay: 360ms;
       }
 
       .question::before,
@@ -224,6 +273,15 @@
       #voice-btn {
         color: var(--primary);
         background: #fff;
+      }
+
+      #tts-audio {
+        width: min(220px, 100%);
+        height: 36px;
+      }
+
+      #tts-audio[hidden] {
+        display: none;
       }
 
       /* #voice-btn:hover:not(:disabled) {
@@ -308,6 +366,18 @@
         }
       }
 
+      @keyframes speaking-bars {
+        from {
+          height: 6px;
+          opacity: 0.6;
+        }
+
+        to {
+          height: 17px;
+          opacity: 1;
+        }
+      }
+
       @media (max-width: 640px) {
         body {
           padding: 0;
@@ -343,6 +413,13 @@
         #send-btn {
           padding-inline: 17px;
         }
+
+        #tts-audio:not([hidden]) {
+          position: absolute;
+          right: 12px;
+          bottom: 78px;
+          max-width: calc(100% - 24px);
+        }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -351,7 +428,8 @@
         }
 
         #voice-btn.is-recording,
-        #voice-btn.is-recording::before {
+        #voice-btn.is-recording::before,
+        .speech-indicator span {
           animation: none;
         }
       }
@@ -380,6 +458,7 @@
           语音输入
         </button>
         <button id="send-btn" type="button">发送</button>
+        <audio id="tts-audio" controls hidden aria-label="AI 回答语音"></audio>
       </div>
     </main>
 
@@ -389,30 +468,182 @@
       const sendBtn = document.getElementById('send-btn');
 
       const voiceBtn = document.getElementById('voice-btn');
+      const ttsAudio = document.getElementById('tts-audio');
 
       const chat = document.getElementById('chat');
 
       let eventSource = null;
       let hasReceivedData = false;
+      let isSending = false;
+      let activeTts = null;
+
+      function stopTts() {
+        const session = activeTts;
+        activeTts = null;
+        if (session) {
+          session.indicator.hidden = true;
+          session.eventController.abort();
+          session.socket.close();
+          URL.revokeObjectURL(session.objectUrl);
+        }
+        ttsAudio.pause();
+        ttsAudio.removeAttribute('src');
+        ttsAudio.load();
+        ttsAudio.hidden = true;
+      }
+
+      function setSpeechIndicator(session, playing) {
+        session.indicator.hidden = false;
+        session.indicator.classList.toggle('is-playing', playing);
+        const label = playing ? '暂停朗读' : ttsAudio.ended ? '从头朗读' : '继续朗读';
+        session.indicator.setAttribute('aria-label', label);
+        session.indicator.title = label;
+      }
+
+      function pumpTtsAudio(session) {
+        if (activeTts !== session || !session.sourceBuffer) return;
+        if (session.sourceBuffer.updating || session.mediaSource.readyState !== 'open') return;
+
+        if (session.chunks.length) {
+          try {
+            session.sourceBuffer.appendBuffer(session.chunks.shift());
+          } catch (error) {
+            console.error('音频追加失败', error);
+            statusText.textContent = '语音播放失败，文字回答仍可查看';
+            stopTts();
+          }
+        } else if (session.done) {
+          session.mediaSource.endOfStream();
+        }
+      }
+
+      async function openTtsSession(indicator) {
+        const sessionId = crypto.randomUUID();
+        const socketUrl = new URL('/speech/tts/ws', location.href);
+        socketUrl.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        socketUrl.searchParams.set('ttsSessionId', sessionId);
+
+        const socket = new WebSocket(socketUrl);
+        socket.binaryType = 'arraybuffer';
+        const mediaSource = new MediaSource();
+        const session = {
+          id: sessionId,
+          socket,
+          mediaSource,
+          objectUrl: URL.createObjectURL(mediaSource),
+          indicator,
+          eventController: new AbortController(),
+          sourceBuffer: null,
+          chunks: [],
+          done: false,
+          playStarted: false,
+        };
+        activeTts = session;
+        ttsAudio.src = session.objectUrl;
+        ttsAudio.addEventListener('playing', () => {
+          if (activeTts === session) setSpeechIndicator(session, true);
+        }, { signal: session.eventController.signal });
+        ttsAudio.addEventListener('pause', () => {
+          if (activeTts === session && !indicator.hidden) {
+            setSpeechIndicator(session, false);
+          }
+        }, { signal: session.eventController.signal });
+        ttsAudio.addEventListener('ended', () => {
+          if (activeTts === session) setSpeechIndicator(session, false);
+        }, { signal: session.eventController.signal });
+        // 在用户点击“发送”的调用栈内请求播放，尽量保留浏览器的用户激活状态。
+        void ttsAudio.play().catch(() => {
+          if (activeTts === session) {
+            ttsAudio.hidden = false;
+            statusText.textContent = '点击音频播放器开始朗读';
+          }
+        });
+
+        mediaSource.addEventListener('sourceopen', () => {
+          if (activeTts !== session) return;
+          try {
+            session.sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+            session.sourceBuffer.addEventListener('updateend', () => {
+              if (activeTts !== session) return;
+              if (!session.playStarted && ttsAudio.buffered.length) {
+                session.playStarted = true;
+                void ttsAudio.play().catch(() => {
+                  ttsAudio.hidden = false;
+                  statusText.textContent = '点击音频播放器开始朗读';
+                });
+              }
+              pumpTtsAudio(session);
+            });
+            pumpTtsAudio(session);
+          } catch (error) {
+            console.error('音频解码器初始化失败', error);
+            statusText.textContent = '当前浏览器无法播放流式 MP3';
+            stopTts();
+          }
+        });
+
+        socket.onmessage = (event) => {
+          if (activeTts !== session) return;
+          if (event.data instanceof ArrayBuffer) {
+            session.chunks.push(event.data);
+            pumpTtsAudio(session);
+            return;
+          }
+          try {
+            const message = JSON.parse(event.data);
+            if (message.type === 'tts_done') {
+              session.done = true;
+              pumpTtsAudio(session);
+            } else if (message.type === 'tts_error') {
+              statusText.textContent = `语音合成失败：${message.message || message.error || '未知错误'}`;
+              session.done = true;
+              pumpTtsAudio(session);
+            }
+          } catch (error) {
+            console.error('无法解析 TTS 消息', error);
+          }
+        };
+
+        socket.onclose = () => {
+          if (activeTts !== session) return;
+          session.done = true;
+          pumpTtsAudio(session);
+        };
+
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error('语音连接超时')), 8000);
+          socket.addEventListener('open', () => {
+            clearTimeout(timer);
+            resolve(sessionId);
+          }, { once: true });
+          socket.addEventListener('error', () => {
+            clearTimeout(timer);
+            reject(new Error('语音连接失败'));
+          }, { once: true });
+        });
+      }
 
       function finish() {
         eventSource?.close();
         eventSource = null;
+        isSending = false;
         sendBtn.disabled = false;
         voiceBtn.disabled = false;
         queryInput.focus();
       }
 
-      function sendQuery(value = queryInput.value) {
+      async function sendQuery(value = queryInput.value) {
         const query = value.trim();
-        if (!query || eventSource) {
+        if (!query || isSending) {
           return;
         }
 
+        isSending = true;
         sendBtn.disabled = true;
         voiceBtn.disabled = true;
         hasReceivedData = false;
         queryInput.value = '';
+        stopTts();
 
         const question = document.createElement('div');
         question.classList.add('question');
@@ -420,40 +651,81 @@
         chat.appendChild(question);
         chat.scrollTop = chat.scrollHeight;
 
-        const url = `/ai/chat/stream?query=${encodeURIComponent(query)}`;
-        eventSource = new EventSource(url);
-
         const answer = document.createElement('div');
         answer.classList.add('answer');
+        const answerText = document.createElement('span');
+        const indicator = document.createElement('button');
+        indicator.classList.add('speech-indicator');
+        indicator.type = 'button';
+        indicator.hidden = true;
+        indicator.setAttribute('aria-label', '停止朗读');
+        indicator.title = '停止朗读';
+        indicator.innerHTML = '<span></span><span></span><span></span>';
+        indicator.addEventListener('click', () => {
+          if (activeTts?.indicator !== indicator) return;
+          if (!ttsAudio.paused) {
+            ttsAudio.pause();
+            setSpeechIndicator(activeTts, false);
+            statusText.textContent = '已暂停朗读，点击图标可继续播放';
+          } else {
+            if (ttsAudio.ended) ttsAudio.currentTime = 0;
+            void ttsAudio.play().catch(() => {
+              ttsAudio.hidden = false;
+              statusText.textContent = '点击音频播放器开始朗读';
+            });
+          }
+        });
+        answer.append(answerText, indicator);
         chat.appendChild(answer);
+
+        let sessionId;
+        if (window.MediaSource && MediaSource.isTypeSupported('audio/mpeg')) {
+          try {
+            sessionId = await openTtsSession(indicator);
+          } catch (error) {
+            console.error(error);
+            stopTts();
+            statusText.textContent = '语音连接失败，继续显示文字回答';
+          }
+        } else {
+          statusText.textContent = '当前浏览器不支持流式 MP3，继续显示文字回答';
+        }
+        const params = new URLSearchParams({ query });
+        if (sessionId) params.set('ttsSessionId', sessionId);
+        eventSource = new EventSource(`/ai/chat/stream?${params}`);
 
         eventSource.onopen = () => {
           statusText.textContent = '正在生成回答...';
-          answer.textContent = '正在思考...';
+          answerText.textContent = '正在思考...';
         };
 
         eventSource.onmessage = (event) => {
           if (!hasReceivedData) {
-            answer.textContent = '';
+            answerText.textContent = '';
             hasReceivedData = true;
           }
-          answer.textContent += event.data;
+          answerText.textContent += event.data;
           chat.scrollTop = chat.scrollHeight;
         };
 
         eventSource.onerror = () => {
           if (!hasReceivedData) {
-            answer.textContent = '连接失败，请检查服务是否正常运行';
+            answerText.textContent = '连接失败，请检查服务是否正常运行';
           }
           statusText.textContent = hasReceivedData
             ? '回答完成'
             : '连接失败，请检查服务是否正常运行';
           finish();
         };
+
+        eventSource.addEventListener('done', () => {
+          statusText.textContent = '回答完成';
+          finish();
+        });
       }
 
       sendBtn.addEventListener('click', () => {
-        sendQuery();
+        void sendQuery();
       });
 
       queryInput.addEventListener('keydown', (event) => {
@@ -577,7 +849,7 @@
             }
 
             if (recognizedText) {
-              sendQuery(recognizedText);
+              void sendQuery(recognizedText);
             }
           };
 
@@ -625,6 +897,7 @@
 
       window.addEventListener('beforeunload', () => {
         eventSource?.close();
+        stopTts();
         if (mediaRecorder?.state === 'recording') {
           mediaRecorder.stop();
         }

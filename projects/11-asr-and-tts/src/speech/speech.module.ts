@@ -3,13 +3,16 @@ import { SpeechService } from './speech.service.js';
 import { SpeechController } from './speech.controller.js';
 import { ConfigService } from '@nestjs/config';
 import tencentcloud from 'tencentcloud-sdk-nodejs';
+import { TtsRelayService } from './tts-relay.service.js';
 
 const AsrClient = tencentcloud.asr.v20190614.Client;
 
 @Module({
   controllers: [SpeechController],
+  exports: [TtsRelayService],
   providers: [
     SpeechService,
+    TtsRelayService,
     {
       provide: 'ASR_CLIENT',
       inject: [ConfigService],
