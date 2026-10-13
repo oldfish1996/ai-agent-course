@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
-import z, { mime } from "zod";
+import z from "zod";
 
 // 数据库
 const database = {
