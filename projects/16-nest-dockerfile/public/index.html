@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>书架 · 图书管理</title>
+    <style>
+      * { box-sizing: border-box; }
+      :root { font-family: system-ui, -apple-system, sans-serif; color: #24382f; background: #f4f6f2; }
+      body { margin: 0; }
+      main { max-width: 1200px; margin: auto; padding: 48px 24px; }
+      header, .toolbar, .actions, .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+      .eyebrow { color: #63806d; font-size: 12px; letter-spacing: 3px; }
+      h1 { font-size: 34px; margin: 8px 0; }
+      h2 { font-size: 20px; margin: 0; }
+      p { color: #69776e; line-height: 1.6; }
+      button, input, textarea { font: inherit; }
+      button { border: 1px solid #d7e0d8; background: white; color: #304c3b; border-radius: 8px; padding: 10px 16px; cursor: pointer; }
+      button:hover { background: #edf3ec; }
+      button:disabled { opacity: .5; cursor: wait; }
+      .primary { color: white; background: #286347; border-color: #286347; }
+      .primary:hover { background: #1b4a33; }
+      .danger { color: #ae3d37; }
+      .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; margin-top: 28px; align-items: start; }
+      .panel { background: white; border: 1px solid #e0e6de; border-radius: 16px; padding: 24px; }
+      .toolbar { margin: 20px 0; }
+      input, textarea { width: 100%; border: 1px solid #ced8ce; border-radius: 8px; padding: 10px 12px; background: #fff; color: #24382f; }
+      input:focus, textarea:focus, button:focus-visible { outline: 2px solid #5c9873; outline-offset: 2px; }
+      #search { flex: 1; min-width: 180px; }
+      label { display: block; font-size: 13px; margin: 18px 0 7px; }
+      .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      textarea { min-height: 100px; resize: vertical; }
+      form .actions { margin-top: 24px; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; white-space: nowrap; }
+      th { text-align: left; font-weight: 500; color: #748074; background: #f7f9f5; }
+      th, td { padding: 14px 10px; border-bottom: 1px solid #edf0e9; }
+      td:first-child { white-space: normal; min-width: 160px; overflow-wrap: anywhere; }
+      td small { display: block; color: #788378; margin-top: 5px; }
+      td button { padding: 6px 9px; margin: 2px; }
+      #status { margin-top: 20px; padding: 12px 16px; border-radius: 8px; background: #e7f0e5; }
+      #status[data-error="true"] { color: #9f302c; background: #fff0ee; }
+      [hidden] { display: none !important; }
+      #empty { text-align: center; padding: 32px 0; }
+      #count { font-size: 13px; color: #788378; }
+      dialog { width: min(520px, calc(100% - 32px)); border: 0; border-radius: 16px; padding: 28px; color: #24382f; }
+      dialog::backdrop { background: #142a2255; }
+      #detail-content { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; }
+      @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } main { padding: 24px 16px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div><div class="eyebrow">BOOK COLLECTION</div><h1>我的书架</h1><p>管理每一本好书，让阅读井井有条。</p></div>
+        <button id="new-book" class="primary">＋ 新增图书</button>
+      </header>
+      <div id="status" role="status" aria-live="polite" hidden></div>
+      <div class="layout">
+        <section class="panel" aria-labelledby="list-title">
+          <div class="section-heading"><h2 id="list-title">图书列表</h2><span id="count"></span></div>
+          <div class="toolbar"><input id="search" type="search" aria-label="搜索书名或作者" placeholder="搜索书名或作者…" /><button id="refresh">刷新列表</button></div>
+          <div class="table-wrap"><table><thead><tr><th>图书 / 作者</th><th>价格</th><th>库存</th><th>操作</th></tr></thead><tbody id="books"></tbody></table></div>
+          <p id="empty" hidden>还没有图书，从右侧添加第一本吧。</p>
+        </section>
+        <section class="panel" id="editor" aria-labelledby="form-title">
+          <h2 id="form-title">新增图书</h2>
+          <form id="book-form">
+            <label for="title">书名</label><input id="title" name="title" required maxlength="255" />
+            <label for="author">作者</label><input id="author" name="author" required maxlength="255" />
+            <div class="pair">
+              <div><label for="price">价格（元）</label><input id="price" name="price" type="number" min="0" max="99999999.99" step="0.01" required /></div>
+              <div><label for="stock">库存（本）</label><input id="stock" name="stock" type="number" min="0" max="2147483647" step="1" required value="0" /></div>
+            </div>
+            <label for="publishedAt">出版日期</label><input id="publishedAt" name="publishedAt" type="date" required />
+            <label for="description">图书简介</label><textarea id="description" name="description" placeholder="写一点关于这本书的介绍…"></textarea>
+            <div class="actions"><button id="save" class="primary" type="submit">添加图书</button><button id="cancel" type="button">重置</button></div>
+          </form>
+        </section>
+      </div>
+      <dialog id="detail"><h2>图书详情</h2><p id="detail-content"></p><form method="dialog"><button>关闭</button></form></dialog>
+    </main>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const form = $('book-form');
+      let books = [];
+      let editingId = null;
+      let busy = false;
+      let loadSequence = 0;
+
+      function notify(message, error = false) {
+        $('status').textContent = message;
+        $('status').dataset.error = String(error);
+        $('status').hidden = false;
+      }
+
+      async function request(path = '', options = {}) {
+        const response = await fetch(`/book${path}`, {
+          ...options,
+          headers: { 'Content-Type': 'application/json', ...options.headers },
+        });
+        const text = await response.text();
+        let data;
+        try { data = text ? JSON.parse(text) : null; } catch { throw new Error('接口返回了非 JSON 内容，请通过 Nest 服务访问此页面。'); }
+        if (!response.ok) throw new Error([data?.message || `请求失败（${response.status}）`].flat().join('；'));
+        return data;
+      }
+
+      function render() {
+        const keyword = $('search').value.trim().toLowerCase();
+        const visible = books.filter(book => `${book.title} ${book.author}`.toLowerCase().includes(keyword));
+        $('count').textContent = `${visible.length} / ${books.length} 本`;
+        $('books').replaceChildren();
+        $('empty').hidden = visible.length > 0;
+        $('empty').textContent = keyword ? '没有找到匹配的图书。' : '还没有图书，添加第一本吧。';
+        for (const book of visible) {
+          const row = document.createElement('tr');
+          const info = row.insertCell();
+          const title = document.createElement('strong');
+          title.textContent = book.title;
+          const author = document.createElement('small');
+          author.textContent = `${book.author} · #${book.id}`;
+          info.append(title, author);
+          row.insertCell().textContent = `¥${Number(book.price).toFixed(2)}`;
+          row.insertCell().textContent = book.stock;
+          const actions = row.insertCell();
+          for (const [action, label] of [['detail', '详情'], ['edit', '编辑'], ['delete', '删除']]) {
+            const button = document.createElement('button');
+            button.textContent = label;
+            button.dataset.action = action;
+            button.dataset.id = book.id;
+            button.disabled = busy;
+            button.setAttribute('aria-label', `${label}：${book.title}`);
+            if (action === 'delete') button.className = 'danger';
+            actions.append(button);
+          }
+          $('books').append(row);
+        }
+      }
+
+      async function load() {
+        const sequence = ++loadSequence;
+        const data = await request();
+        if (!Array.isArray(data)) throw new Error('图书列表格式异常');
+        if (sequence !== loadSequence) return;
+        books = data;
+        render();
+      }
+
+      function reset() {
+        editingId = null;
+        form.reset();
+        $('form-title').textContent = '新增图书';
+        $('save').textContent = '添加图书';
+        $('cancel').textContent = '重置';
+      }
+
+      async function run(action) {
+        if (busy) return;
+        busy = true;
+        document.querySelectorAll('button, #book-form input, #book-form textarea').forEach(el => el.disabled = true);
+        try { await action(); } catch (error) { notify(error.message || '请求失败，请检查服务连接。', true); }
+        finally {
+          busy = false;
+          document.querySelectorAll('button, #book-form input, #book-form textarea').forEach(el => el.disabled = false);
+        }
+      }
+
+      async function refreshAfterSave(message) {
+        notify(message);
+        try { await load(); } catch (error) { notify(`${message}，但列表刷新失败：${error.message}。请点击刷新列表。`, true); }
+      }
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const payload = {
+          title: form.elements.title.value.trim(),
+          author: form.elements.author.value.trim(),
+          price: Number(form.elements.price.value),
+          stock: Number(form.elements.stock.value),
+          publishedAt: form.elements.publishedAt.value,
+          description: form.elements.description.value.trim(),
+        };
+        if (!payload.title || !payload.author) return notify('书名和作者不能只包含空格。', true);
+        void run(async () => {
+          const updating = editingId !== null;
+          await request(updating ? `/${editingId}` : '', { method: updating ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
+          reset();
+          await refreshAfterSave(updating ? '图书已更新。' : '图书已添加。');
+        });
+      });
+
+      $('books').addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-action]');
+        if (!button || busy) return;
+        const { id, action } = button.dataset;
+        void run(async () => {
+          if (action === 'delete') {
+            const book = books.find(item => String(item.id) === id);
+            if (!confirm(`确定删除《${book.title}》吗？此操作无法撤销。`)) return;
+            await request(`/${id}`, { method: 'DELETE' });
+            if (String(editingId) === id) reset();
+            await refreshAfterSave('图书已删除。');
+            return;
+          }
+          const book = await request(`/${id}`);
+          if (action === 'detail') {
+            $('detail-content').textContent = `书名：${book.title}\n作者：${book.author}\n价格：¥${Number(book.price).toFixed(2)}\n库存：${book.stock} 本\n出版日期：${String(book.publishedAt).slice(0, 10)}\n\n${book.description || '暂无简介'}`;
+            $('detail').showModal();
+          } else {
+            editingId = book.id;
+            for (const field of ['title', 'author', 'price', 'stock', 'description']) form.elements[field].value = book[field] ?? '';
+            form.elements.publishedAt.value = String(book.publishedAt).slice(0, 10);
+            $('form-title').textContent = `编辑图书 #${book.id}`;
+            $('save').textContent = '保存修改';
+            $('cancel').textContent = '取消编辑';
+            $('editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+
+      $('new-book').addEventListener('click', () => { reset(); $('title').focus(); });
+      $('cancel').addEventListener('click', reset);
+      $('search').addEventListener('input', render);
+      $('refresh').addEventListener('click', () => void run(async () => { await load(); notify('列表已刷新。'); }));
+      void run(load);
+    </script>
+  </body>
+</html>
